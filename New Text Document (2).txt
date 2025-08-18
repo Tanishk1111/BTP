@@ -1,8 +1,0 @@
-id user
-ip 10.222.72.147
-pass tyrone@123
-
-
-df -h
-
-ssh user@10.222.72.147
