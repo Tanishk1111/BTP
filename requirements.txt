@@ -1,0 +1,10 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9
+sqlalchemy==2.0.23
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+# Install spatx_core separately, e.g.:
+# pip install -e ..\\spatx_core  (if you have the repo locally)
+# or point to your GitHub URL
+

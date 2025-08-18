@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy spatx_core if local (adjust path as needed)
+COPY spatx_core/ ./spatx_core/
+RUN pip install -e ./spatx_core
+
+# Copy application code
+COPY main.py .
+COPY uploads/ ./uploads/
+COPY test_data.csv .
+COPY prediction_data.csv .
+
+# Create necessary directories
+RUN mkdir -p uploads results
+
+# Expose port
+EXPOSE 8001
+
+# Run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+
