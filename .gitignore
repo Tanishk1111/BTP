@@ -242,3 +242,19 @@ spatx_core/saved_models/
 *.bak
 *.backup
 *.tmp
+
+# Results directory (generated outputs)
+results/
+
+# Data files that might contain sensitive or large data
+prediction_data.csv
+test_data.csv
+*.csv
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Docker build artifacts
+.dockerignore

@@ -19,7 +19,14 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],  # Frontend URL
+    allow_origins=[
+        "http://localhost:8080", 
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",
+        "http://10.222.72.147",  # Lab server IP
+        "http://10.222.72.147:3000",  # Lab frontend
+        "http://10.222.72.147:80",   # Lab nginx
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

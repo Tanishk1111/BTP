@@ -1,47 +1,57 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean
+import os
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
 
-# SQLite database
-DATABASE_URL = "sqlite:///./spatx_users.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Database configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./spatx_users.db")
+
+# Create engine
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # PostgreSQL
+    engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 Base = declarative_base()
 
+# User model
 class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    credits = Column(Float, default=10.0)  # Default 10 credits for new users
-    is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)
+    password_hash = Column(String, nullable=False)
+    credits = Column(Float, default=100.0)  # Starting credits
+    is_admin = Column(String, default="false")  # Using string for SQLite compatibility
     created_at = Column(DateTime, default=datetime.utcnow)
-    last_login = Column(DateTime, default=datetime.utcnow)
 
+# Credit transaction model
 class CreditTransaction(Base):
     __tablename__ = "credit_transactions"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, nullable=False)
-    operation = Column(String, nullable=False)  # "training", "prediction", "admin_add"
-    credits_used = Column(Float, nullable=False)
-    credits_remaining = Column(Float, nullable=False)
-    description = Column(String)
+    operation = Column(String, nullable=False)  # 'training', 'prediction', 'admin_add'
+    amount = Column(Float, nullable=False)  # Positive for add, negative for deduct
     timestamp = Column(DateTime, default=datetime.utcnow)
+    details = Column(String)  # Optional details about the operation
 
 # Create tables
-Base.metadata.create_all(bind=engine)
+def create_tables():
+    Base.metadata.create_all(bind=engine)
 
-# Database dependency
-def get_db():
+# Dependency to get DB session
+def get_db() -> Session:
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
+if __name__ == "__main__":
+    create_tables()
+    print("Database tables created successfully!")
