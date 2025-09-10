@@ -18,7 +18,7 @@ ssh user@10.222.72.147
 ### 2. Setup Project Directory
 
 ```bash
-cd /fungel/Tanishk/
+cd /home/user/fungel/Tanishk/
 mkdir -p spatx-deployment
 cd spatx-deployment
 ```
@@ -178,6 +178,3 @@ docker-compose build frontend --no-cache
 ---
 
 **Happy deploying! 🧬🤖**
-
-
-

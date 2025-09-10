@@ -20,7 +20,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_admin: bool
     created_at: datetime
-    last_login: datetime
+    last_login: Optional[datetime]
 
     class Config:
         from_attributes = True

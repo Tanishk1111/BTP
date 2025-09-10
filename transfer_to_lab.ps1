@@ -6,7 +6,7 @@ param(
     [string]$LabUser = "user",
     [string]$LabPassword = "tyrone@123",
     [string]$LocalPath = "C:\Users\ASUS\Desktop\COCO\BTP",
-    [string]$RemotePath = "/home/user/spatx-deployment"
+    [string]$RemotePath = "/home/user/fungel/Tanishk/spatx-deployment"
 )
 
 Write-Host "🧬 SpatX Lab Transfer Script" -ForegroundColor Cyan
@@ -29,14 +29,13 @@ Write-Host "  Server: $LabServer" -ForegroundColor White
 Write-Host "  User: $LabUser" -ForegroundColor White
 Write-Host "  Remote Path: $RemotePath" -ForegroundColor White
 
-# Test SSH connectivity
+# Test SSH connectivity with better error handling
 Write-Host "`n🔍 Testing SSH connectivity..." -ForegroundColor Yellow
-$sshTest = ssh -o ConnectTimeout=5 -o BatchMode=yes $LabUser@$LabServer "echo 'SSH connection successful'" 2>$null
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ SSH connection successful" -ForegroundColor Green
-} else {
-    Write-Host "⚠️  SSH key authentication failed. Will prompt for password during transfer." -ForegroundColor Yellow
-}
+Write-Host "⚠️  You will be prompted for password: $LabPassword" -ForegroundColor Yellow
+Write-Host "⚠️  If connection fails, check:" -ForegroundColor Red
+Write-Host "    - Lab server is powered on and connected" -ForegroundColor Red
+Write-Host "    - You're on the same network as the lab server" -ForegroundColor Red
+Write-Host "    - Firewall allows SSH (port 22)" -ForegroundColor Red
 
 # Create remote directory
 Write-Host "`n📁 Creating remote directory..." -ForegroundColor Yellow

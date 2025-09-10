@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import os
@@ -33,6 +34,9 @@ app.add_middleware(
 )
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Mount static files for serving uploaded images
+app.mount("/uploads", StaticFiles(directory=UPLOAD_FOLDER), name="uploads")
 
 # Credit management helper functions
 def consume_credits(db: Session, user: User, operation: str, description: str = None):
@@ -248,10 +252,23 @@ async def process_data(
         if not gene_ids_list:
             return JSONResponse({"status": "error", "details": "gene_ids cannot be empty"}, status_code=400)
         
+        # Handle uploaded CSV file path - check if file exists in uploads directory
+        csv_path = breast_csv_path
+        if not os.path.exists(csv_path):
+            # Try looking in uploads directory
+            uploads_csv_path = os.path.join("uploads", breast_csv_path)
+            if os.path.exists(uploads_csv_path):
+                csv_path = uploads_csv_path
+            else:
+                return JSONResponse({
+                    "status": "error", 
+                    "details": f"The training file {breast_csv_path} does not exist"
+                }, status_code=400)
+        
         # Create data adapter with proper parameters
         adapter = BreastDataAdapter(
             image_dir=image_dir,
-            breast_csv=breast_csv_path,
+            breast_csv=csv_path,
             wsi_ids=wsi_ids_list,
             gene_ids=gene_ids_list
         )
@@ -316,10 +333,23 @@ async def predict_genes(
         if not gene_ids_list:
             return JSONResponse({"status": "error", "details": "required_gene_ids cannot be empty"}, status_code=400)
         
+        # Handle uploaded CSV file path - check if file exists in uploads directory
+        csv_path = prediction_csv_path
+        if not os.path.exists(csv_path):
+            # Try looking in uploads directory
+            uploads_csv_path = os.path.join("uploads", prediction_csv_path)
+            if os.path.exists(uploads_csv_path):
+                csv_path = uploads_csv_path
+            else:
+                return JSONResponse({
+                    "status": "error", 
+                    "details": f"The file {prediction_csv_path} does not exist"
+                }, status_code=400)
+        
         # Create prediction data adapter (only needs csv, images, wsi_ids - NO gene expressions!)
         prediction_adapter = BreastPredictionDataAdapter(
             image_dir=image_dir,
-            prediction_csv=prediction_csv_path,
+            prediction_csv=csv_path,
             wsi_ids=wsi_ids_list
         )
         
@@ -368,10 +398,23 @@ async def test_predict_genes(
         if not gene_ids_list:
             return JSONResponse({"status": "error", "details": "required_gene_ids cannot be empty"}, status_code=400)
         
+        # Handle uploaded CSV file path - check if file exists in uploads directory
+        csv_path = prediction_csv_path
+        if not os.path.exists(csv_path):
+            # Try looking in uploads directory
+            uploads_csv_path = os.path.join("uploads", prediction_csv_path)
+            if os.path.exists(uploads_csv_path):
+                csv_path = uploads_csv_path
+            else:
+                return JSONResponse({
+                    "status": "error", 
+                    "details": f"The prediction file {prediction_csv_path} does not exist"
+                }, status_code=400)
+        
         # Test: Create prediction data adapter (only needs csv, images, wsi_ids)
         prediction_adapter = BreastPredictionDataAdapter(
             image_dir=image_dir,
-            prediction_csv=prediction_csv_path,
+            prediction_csv=csv_path,
             wsi_ids=wsi_ids_list
         )
         
@@ -407,3 +450,33 @@ async def test_predict_genes(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+@app.get("/images/")
+async def get_available_images():
+    """Get list of available uploaded images"""
+    try:
+        image_files = []
+        for filename in os.listdir(UPLOAD_FOLDER):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.tif')):
+                file_path = os.path.join(UPLOAD_FOLDER, filename)
+                file_size = os.path.getsize(file_path)
+                image_files.append({
+                    "filename": filename,
+                    "url": f"/uploads/{filename}",
+                    "size": file_size
+                })
+        return {"images": image_files}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading images: {str(e)}")
+
+@app.get("/images/{filename}")
+async def get_image(filename: str):
+    """Get a specific image file"""
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    if not filename.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.tif')):
+        raise HTTPException(status_code=400, detail="Invalid image format")
+    
+    return FileResponse(file_path)

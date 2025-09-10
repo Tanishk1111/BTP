@@ -30,10 +30,14 @@ services:
     environment:
       - DATABASE_URL=postgresql://spatx_user:spatx_password_2024@db:5432/spatx_db
       - SECRET_KEY=your-super-secret-jwt-key-change-this-in-production
-      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - ACCESS_TOKEN_EXPIRE_MINUTES=480
+      - LAB_SERVER_IP=10.222.72.147
+      - ALLOWED_ORIGINS=http://10.222.72.147,http://localhost:3000,http://127.0.0.1:3000
     volumes:
       - ./uploads:/app/uploads
       - ./spatx_core:/app/spatx_core
+      - ./results:/app/results
+      - ./logs:/app/logs
     ports:
       - "8001:8001"
     depends_on:
@@ -41,10 +45,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 5
+      start_period: 60s
 
   # React Frontend  
   frontend:
