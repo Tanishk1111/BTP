@@ -308,7 +308,7 @@ async def predict_genes(
     prediction_csv_path: str = Form(...),
     image_dir: str = Form(default="uploads"),
     wsi_ids: str = Form(...),  # Comma-separated WSI IDs
-    model_id: str = Form(...),  # Model ID for loading pre-trained model
+    model_id: str = Form(default="working_model"),  # Use working model by default
     required_gene_ids: str = Form(...),  # Comma-separated gene IDs to predict
     batch_size: int = Form(default=8),
     results_path: str = Form(default="results/predictions.csv"),
@@ -412,27 +412,61 @@ async def test_predict_genes(
                 }, status_code=400)
         
         # Test: Create prediction data adapter (only needs csv, images, wsi_ids)
-        prediction_adapter = BreastPredictionDataAdapter(
-            image_dir=image_dir,
-            prediction_csv=csv_path,
-            wsi_ids=wsi_ids_list
-        )
+        try:
+            prediction_adapter = BreastPredictionDataAdapter(
+                image_dir=image_dir,
+                prediction_csv=csv_path,
+                wsi_ids=wsi_ids_list
+            )
+        except Exception as adapter_error:
+            return JSONResponse({
+                "status": "error", 
+                "details": f"Error creating data adapter: {str(adapter_error)}"
+            }, status_code=400)
         
-        # Simulate prediction results
+        # Simulate prediction results - limit to uploaded images only
+        import random
+        
         sample_predictions = []
+        uploaded_images = set()
+        
+        # Get list of actually uploaded images
+        upload_dir = "uploads"
+        try:
+            if os.path.exists(upload_dir):
+                uploaded_files = [f for f in os.listdir(upload_dir) if f.endswith('.png')]
+                uploaded_images = {f.replace('.png', '') for f in uploaded_files}
+        except Exception as e:
+            print(f"Error reading upload directory: {e}")
+        
         for i in range(len(prediction_adapter)):
-            data_point = prediction_adapter[i]
-            pred_result = {
-                "barcode": data_point.barcode,
-                "wsi_id": data_point.wsi_id,
-                "x": data_point.x,
-                "y": data_point.y,
-                "image_path": data_point.img_patch_path
-            }
-            # Add fake gene predictions
-            for gene in gene_ids_list:
-                pred_result[gene] = round(2.5 + (i * 0.1), 3)  # Fake prediction values
-            sample_predictions.append(pred_result)
+            try:
+                data_point = prediction_adapter[i]
+                image_name = f"{data_point.barcode}_{data_point.wsi_id}"
+                
+                # Only include if image was actually uploaded (or if we can't check, include all)
+                if not uploaded_images or image_name in uploaded_images:
+                    pred_result = {
+                        "barcode": data_point.barcode,
+                        "wsi_id": data_point.wsi_id,
+                        "x": data_point.x,
+                        "y": data_point.y,
+                        "image_path": data_point.img_patch_path
+                    }
+                    # Add realistic fake gene predictions (varied, not all same)
+                    for j, gene in enumerate(gene_ids_list):
+                        # Create more realistic varied predictions
+                        base_value = random.uniform(0.1, 2.8)
+                        noise = random.uniform(-0.3, 0.3)
+                        pred_result[gene] = round(max(0.0, base_value + noise), 3)
+                    sample_predictions.append(pred_result)
+            except FileNotFoundError as e:
+                # Skip missing images
+                print(f"Skipping missing image: {e}")
+                continue
+            except Exception as e:
+                print(f"Error processing data point {i}: {e}")
+                continue
         
         return JSONResponse({
             "status": "success", 
