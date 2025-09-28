@@ -14,6 +14,7 @@ from spatx_core.predictors import SimpleCITPredictor
 from database import get_db, User, CreditTransaction
 from auth import get_current_user, get_admin_user, create_access_token, verify_password, get_password_hash
 from models import UserCreate, UserLogin, UserResponse, Token, CreditUpdate, get_operation_cost
+from model_loader import load_or_expand_model, map_requested_genes
 
 app = FastAPI()
 
@@ -24,6 +25,8 @@ app.add_middleware(
         "http://localhost:8080", 
         "http://127.0.0.1:8080",
         "http://localhost:3000",
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173",  # Vite dev server
         "http://10.222.72.147",  # Lab server IP
         "http://10.222.72.147:3000",  # Lab frontend
         "http://10.222.72.147:80",   # Lab nginx
@@ -231,6 +234,7 @@ async def process_data(
     num_epochs: int = Form(default=10),
     batch_size: int = Form(default=8),
     learning_rate: float = Form(default=0.001),
+    model_id: str = Form(default="session_model"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -284,14 +288,52 @@ async def process_data(
         )
         
         model, results = trainer.train()
-        
+
+        # Persist artifacts
+        import torch, json, hashlib, time
+        os.makedirs("saved_models/cit_to_gene", exist_ok=True)
+        # Normalize model_id
+        safe_model_id = model_id.strip().replace(" ", "_") or "session_model"
+        timestamp = int(time.time())
+        base_path = f"saved_models/cit_to_gene/{safe_model_id}"
+        state_path = f"{base_path}.pth"
+        gene_path = f"{base_path}_genes.txt"
+        meta_path = f"{base_path}_meta.json"
+
+        # Save state dict
+        torch.save(model.state_dict(), state_path)
+        # Save gene ids (canonical ordering from adapter)
+        with open(gene_path, "w", encoding="utf-8") as gf:
+            for g in adapter.gene_ids:
+                gf.write(g + "\n")
+        # Save metadata
+        metadata = {
+            "model_id": safe_model_id,
+            "timestamp": timestamp,
+            "user": current_user.username,
+            "num_genes": len(adapter.gene_ids),
+            "gene_ids_md5": hashlib.md5("|".join(adapter.gene_ids).encode()).hexdigest(),
+            "wsi_ids": wsi_ids_list,
+            "num_epochs": num_epochs,
+            "learning_rate": learning_rate,
+            "batch_size": batch_size,
+            "best_val_loss": results.best_val_loss,
+            "best_epoch": results.best_epoch,
+        }
+        with open(meta_path, "w", encoding="utf-8") as mf:
+            json.dump(metadata, mf, indent=2)
+
         return JSONResponse({
-            "status": "success", 
+            "status": "success",
             "message": "Training completed successfully",
             "best_val_loss": results.best_val_loss,
             "best_epoch": results.best_epoch,
             "num_genes": len(gene_ids_list),
             "num_wsi": len(wsi_ids_list),
+            "model_id": safe_model_id,
+            "model_state_path": state_path,
+            "gene_ids_path": gene_path,
+            "metadata_path": meta_path,
             "credits_used": get_operation_cost("training"),
             "remaining_credits": remaining_credits,
             "user": current_user.username
@@ -304,182 +346,288 @@ def read_root():
     return {"message": "SpatX Core API is running!"}
 
 @app.post("/predict/")
-async def predict_genes(
+async def unified_predict(
     prediction_csv_path: str = Form(...),
+    wsi_ids: str = Form(...),
+    model_id: str = Form(default="working_model"),
+    requested_genes: str = Form(default=""),
     image_dir: str = Form(default="uploads"),
-    wsi_ids: str = Form(...),  # Comma-separated WSI IDs
-    model_id: str = Form(default="working_model"),  # Use working model by default
-    required_gene_ids: str = Form(...),  # Comma-separated gene IDs to predict
     batch_size: int = Form(default=8),
-    results_path: str = Form(default="results/predictions.csv"),
+    allow_expand: bool = Form(default=True),
+    allow_dummy: bool = Form(default=False),
+    large_image_path: str = Form(default=""),  # optional WSI / large image for on-the-fly extraction (can be inferred)
+    large_image_filename: str = Form(default=""),  # new: allow passing just the filename already in image_dir
+    auto_extract: bool = Form(default=False),   # explicit trigger (legacy); now also auto-detect if patches missing
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """Unified prediction endpoint supporting gene subset selection and 1->N head expansion.
+    Use requested_genes comma list or leave blank for all available.
+    """
     try:
-        # Check and consume credits FIRST
         remaining_credits = consume_credits(
-            db=db, 
-            user=current_user, 
+            db=db,
+            user=current_user,
             operation="prediction",
-            description=f"Prediction with {wsi_ids} WSI IDs and {required_gene_ids} genes"
+            description=f"Unified prediction model={model_id} wsi_ids={wsi_ids} genes={requested_genes}"
         )
-        
-        # Parse comma-separated lists
-        wsi_ids_list = [wsi.strip() for wsi in wsi_ids.split(',') if wsi.strip()]
-        gene_ids_list = [gene.strip() for gene in required_gene_ids.split(',') if gene.strip()]
-        
+        wsi_ids_list = [w.strip() for w in wsi_ids.split(',') if w.strip()]
         if not wsi_ids_list:
-            return JSONResponse({"status": "error", "details": "wsi_ids cannot be empty"}, status_code=400)
-        if not gene_ids_list:
-            return JSONResponse({"status": "error", "details": "required_gene_ids cannot be empty"}, status_code=400)
-        
-        # Handle uploaded CSV file path - check if file exists in uploads directory
+            return JSONResponse({"status":"error","details":"wsi_ids cannot be empty"}, status_code=400)
+        # Resolve CSV path
         csv_path = prediction_csv_path
         if not os.path.exists(csv_path):
-            # Try looking in uploads directory
-            uploads_csv_path = os.path.join("uploads", prediction_csv_path)
-            if os.path.exists(uploads_csv_path):
-                csv_path = uploads_csv_path
+            alt = os.path.join("uploads", prediction_csv_path)
+            if os.path.exists(alt):
+                csv_path = alt
             else:
+                return JSONResponse({"status":"error","details":f"prediction file {prediction_csv_path} not found"}, status_code=400)
+
+        # Normalize CSV to ensure required columns (barcode,id,x_pixel,y_pixel)
+        from utils_prediction import normalize_prediction_csv
+        try:
+            normalized_csv_path, auto_barcodes, added_id = normalize_prediction_csv(csv_path, wsi_ids_list[0], output_dir=image_dir)
+            csv_path = normalized_csv_path
+        except Exception as norm_err:
+            return JSONResponse({'status':'error','details':f'CSV normalization failed: {norm_err}'}, status_code=400)
+
+        req_gene_list = [g.strip() for g in requested_genes.split(',') if g.strip()] if requested_genes else []
+        performed_auto_extract = False
+        inferred_large_image = False
+        # Always scan a handful of rows to see if any expected patch is missing
+        import csv as _csv
+        missing_any_patch = False
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as cf:
+                reader = _csv.DictReader(cf)
+                scan_count = 0
+                for row in reader:
+                    if scan_count >= 25:  # limit scan for speed
+                        break
+                    wsi_id = row.get('id') or row.get('wsi_id')
+                    if not wsi_id or wsi_id not in wsi_ids_list:
+                        continue
+                    barcode = row.get('barcode') or row.get('spot')
+                    if not barcode:
+                        continue
+                    expected_name = f"{barcode}_{wsi_id}.png"
+                    expected_path = os.path.join(image_dir, expected_name)
+                    if not os.path.exists(expected_path):
+                        missing_any_patch = True
+                        break
+                    scan_count += 1
+        except Exception:
+            pass
+        # If patches missing, attempt to infer a large image if none provided
+        # If explicit filename provided, prefer it (inside image_dir)
+        if large_image_filename:
+            candidate = os.path.join(image_dir, large_image_filename)
+            if os.path.exists(candidate):
+                large_image_path = candidate
+        if missing_any_patch and not large_image_path:
+            from PIL import Image as _Image
+            search_dirs = [image_dir, 'uploads', '.', 'extra']
+            candidate_files = []
+            for sd in search_dirs:
+                if not os.path.isdir(sd):
+                    continue
+                try:
+                    for f in os.listdir(sd):
+                        fl = f.lower()
+                        if fl.endswith(('.png','.jpg','.jpeg','.tif','.tiff')):
+                            fp = os.path.join(sd, f)
+                            try:
+                                with _Image.open(fp) as imtest:
+                                    w,h = imtest.size
+                            except Exception:
+                                continue
+                            # Filter out patch-sized or near-patch images (<= 2*PATCH in either dim)
+                            if w <= 2*224 and h <= 2*224:
+                                continue
+                            area = w*h
+                            candidate_files.append((area, fp, w, h))
+                except Exception:
+                    continue
+            if candidate_files:
+                candidate_files.sort(reverse=True)  # largest area first
+                large_image_path = candidate_files[0][1]
+                inferred_large_image = True
+        # Decide if we perform extraction: if user explicitly asked OR patches missing (auto) AND we have a large image path
+        trigger_extraction = (auto_extract or missing_any_patch) and bool(large_image_path)
+        if trigger_extraction:
+            try:
+                from patch_extraction import extract_patches
+                coords = []
+                with open(csv_path, 'r', encoding='utf-8') as cf:
+                    reader = _csv.DictReader(cf)
+                    for row in reader:
+                        wsi_id = row.get('id') or row.get('wsi_id')
+                        if not wsi_id or wsi_id not in wsi_ids_list:
+                            continue
+                        try:
+                            x = float(row.get('x_pixel'))
+                            y = float(row.get('y_pixel'))
+                        except (TypeError, ValueError):
+                            continue
+                        barcode = row.get('barcode') or row.get('spot') or 'unknown'
+                        coords.append((barcode, wsi_id, x, y))
+                if not coords:
+                    return JSONResponse({'status':'error','details':'No coordinates found for extraction'}, status_code=400)
+                if not os.path.exists(large_image_path):
+                    return JSONResponse({'status':'error','details':f'Large image not found for extraction: {large_image_path}'}, status_code=400)
+                extract_patches(large_image_path, coords, image_dir)
+                performed_auto_extract = True
+            except Exception as ex_auto:
+                return JSONResponse({'status':'error','details':f'Patch extraction failed: {ex_auto}'}, status_code=500)
+        # Build adapter after (potential) extraction
+        try:
+            prediction_adapter = BreastPredictionDataAdapter(image_dir=image_dir, prediction_csv=csv_path, wsi_ids=wsi_ids_list)
+        except ValueError as ve:
+            msg = str(ve)
+            if 'missing in the CSV' in msg:
+                # Append available IDs for clarity
+                try:
+                    import pandas as _pd
+                    _df_ids = list(_pd.read_csv(csv_path)['id'].unique())  # type: ignore
+                except Exception:
+                    _df_ids = []
                 return JSONResponse({
-                    "status": "error", 
-                    "details": f"The file {prediction_csv_path} does not exist"
+                    'status':'error',
+                    'details': msg,
+                    'available_wsi_ids': _df_ids,
+                    'received_wsi_ids': wsi_ids_list
                 }, status_code=400)
-        
-        # Create prediction data adapter (only needs csv, images, wsi_ids - NO gene expressions!)
-        prediction_adapter = BreastPredictionDataAdapter(
-            image_dir=image_dir,
-            prediction_csv=csv_path,
-            wsi_ids=wsi_ids_list
-        )
-        
-        # Create predictor with pre-trained model
-        predictor = SimpleCITPredictor(
-            prediction_adapter=prediction_adapter,
-            model_id=model_id,
-            required_gene_ids=gene_ids_list,
-            device='cpu',  # Use CPU for compatibility
-            results_path=results_path,
-            batch_size=batch_size
-        )
-        
-        # Run prediction
-        results = predictor.predict()
-        
-        return JSONResponse({
-            "status": "success", 
-            "message": "Gene expression prediction completed successfully",
-            "predictions_count": len(results.predictions),
-            "predicted_genes": results.gene_ids,
-            "results_saved_to": results_path,
-            "sample_prediction": results.predictions[0] if results.predictions else None
-        })
-        
+            raise
+        dataset_size = len(prediction_adapter)
+        if dataset_size == 0:
+            return JSONResponse({"status":"error","details":"No prediction rows after filtering"}, status_code=400)
+        effective_batch = min(batch_size, dataset_size)
+        try:
+            # Always load full model gene set (do not shrink to subset); expansion only if single head
+            model, model_gene_ids, load_mode = load_or_expand_model(model_id, [], device='cpu', allow_expand=allow_expand)
+            model.eval()
+            # Determine which requested genes are known
+            if req_gene_list:
+                known_genes = [g for g in req_gene_list if g in model_gene_ids]
+                missing_genes = [g for g in req_gene_list if g not in model_gene_ids]
+            else:
+                known_genes = model_gene_ids
+                missing_genes = []
+            if not known_genes:
+                return JSONResponse({
+                    'status':'error',
+                    'details':'None of the requested genes exist in model gene set',
+                    'requested_genes': req_gene_list,
+                    'missing_genes': missing_genes,
+                    'model_genes_count': len(model_gene_ids)
+                }, status_code=400)
+            # Build index map ONLY for known genes (even if model expanded or real)
+            from model_loader import map_requested_genes as _map
+            idx_map = _map(model_gene_ids, known_genes)
+            import torch
+            from PIL import Image
+            import torchvision.transforms as T
+            transform = T.Compose([
+                T.Resize((224,224)),
+                T.ToTensor(),
+                T.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
+            ])
+            predictions_out = []
+            per_gene_values: dict[str, list[float]] = {g: [] for g in known_genes}
+            for i in range(dataset_size):
+                dp = prediction_adapter[i]
+                try:
+                    img = Image.open(dp.img_patch_path).convert('RGB')
+                except FileNotFoundError:
+                    continue
+                tensor = transform(img).unsqueeze(0)
+                with torch.no_grad():
+                    raw = model(tensor)
+                # raw shape: [1, full_gene_count]
+                out_vec = raw[0][idx_map]
+                pred_record = {
+                    'barcode': dp.barcode,
+                    'wsi_id': dp.wsi_id,
+                    'x': dp.x,
+                    'y': dp.y,
+                    'image_path': dp.img_patch_path
+                }
+                for gi,gene in enumerate(known_genes):
+                    val = float(out_vec[gi])
+                    pred_record[gene] = val
+                    per_gene_values[gene].append(val)
+                predictions_out.append(pred_record)
+            gene_stats = {g: {
+                'min': min(vals) if vals else 0.0,
+                'max': max(vals) if vals else 0.0,
+                'mean': (sum(vals)/len(vals)) if vals else 0.0
+            } for g,vals in per_gene_values.items()}
+            return JSONResponse({
+                'status':'success',
+                'message':'Prediction complete',
+                'model_id': model_id,
+                'prediction_mode': load_mode,
+                'requested_genes': req_gene_list if req_gene_list else model_gene_ids,
+                'known_genes': known_genes,
+                'missing_genes': missing_genes,
+                'wsi_ids': wsi_ids_list,
+                'predictions_count': len(predictions_out),
+                'gene_stats': gene_stats,
+                'predictions': predictions_out,
+                'sample_predictions': predictions_out,  # backward compat alias for older frontend code
+                'auto_extracted': performed_auto_extract,
+                'large_image_path_used': large_image_path if performed_auto_extract else None,
+                'large_image_filename_param': large_image_filename or None,
+                'large_image_inferred': inferred_large_image,
+                'normalized_csv_path': csv_path,
+                'auto_generated_barcodes': auto_barcodes,
+                'credits_used': get_operation_cost('prediction'),
+                'remaining_credits': remaining_credits,
+                'user': current_user.username
+            })
+        except Exception as model_err:
+            if not allow_dummy:
+                return JSONResponse({'status':'error','details':f'Model load/inference failed: {model_err}'}, status_code=500)
+            import random
+            dummy_preds=[]
+            target_genes = req_gene_list if req_gene_list else []
+            for i in range(dataset_size):
+                dp = prediction_adapter[i]
+                rec={'barcode':dp.barcode,'wsi_id':dp.wsi_id,'x':dp.x,'y':dp.y,'image_path':dp.img_patch_path}
+                for g in target_genes:
+                    rec[g]=round(random.uniform(0.0,3.0),3)
+                dummy_preds.append(rec)
+            return JSONResponse({
+                'status':'success','message':'Dummy predictions (model unavailable)','prediction_mode':'dummy',
+                'error_original': str(model_err),
+                'requested_genes': target_genes,
+                'predictions_count': len(dummy_preds),
+                'predictions': dummy_preds,
+                'sample_predictions': dummy_preds,  # backward compat alias
+                'auto_extracted': performed_auto_extract,
+                'large_image_path_used': large_image_path if performed_auto_extract else None,
+                'large_image_filename_param': large_image_filename or None,
+                'large_image_inferred': inferred_large_image,
+                'normalized_csv_path': csv_path,
+                'auto_generated_barcodes': auto_barcodes,
+                'credits_used': get_operation_cost('prediction'),
+                'remaining_credits': remaining_credits,
+                'user': current_user.username
+            })
     except Exception as e:
-        return JSONResponse({"status": "error", "details": str(e)}, status_code=500)
+        return JSONResponse({'status':'error','details':str(e)}, status_code=500)
+
+@app.post("/predict-single-gene/")
+async def deprecated_single_gene():
+    raise HTTPException(status_code=410, detail="Deprecated. Use /predict/ with requested_genes=YOUR_GENE")
+
+@app.post("/predict-fixed/")
+async def deprecated_fixed():
+    raise HTTPException(status_code=410, detail="Deprecated. Use unified /predict/ endpoint.")
 
 @app.post("/test-predict/")
-async def test_predict_genes(
-    prediction_csv_path: str = Form(...),
-    image_dir: str = Form(default="uploads"),
-    wsi_ids: str = Form(...),  # Comma-separated WSI IDs
-    required_gene_ids: str = Form(...),  # Comma-separated gene IDs to predict
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Test prediction data flow without actual model inference"""
-    try:
-        # Parse comma-separated lists
-        wsi_ids_list = [wsi.strip() for wsi in wsi_ids.split(',') if wsi.strip()]
-        gene_ids_list = [gene.strip() for gene in required_gene_ids.split(',') if gene.strip()]
-        
-        if not wsi_ids_list:
-            return JSONResponse({"status": "error", "details": "wsi_ids cannot be empty"}, status_code=400)
-        if not gene_ids_list:
-            return JSONResponse({"status": "error", "details": "required_gene_ids cannot be empty"}, status_code=400)
-        
-        # Handle uploaded CSV file path - check if file exists in uploads directory
-        csv_path = prediction_csv_path
-        if not os.path.exists(csv_path):
-            # Try looking in uploads directory
-            uploads_csv_path = os.path.join("uploads", prediction_csv_path)
-            if os.path.exists(uploads_csv_path):
-                csv_path = uploads_csv_path
-            else:
-                return JSONResponse({
-                    "status": "error", 
-                    "details": f"The prediction file {prediction_csv_path} does not exist"
-                }, status_code=400)
-        
-        # Test: Create prediction data adapter (only needs csv, images, wsi_ids)
-        try:
-            prediction_adapter = BreastPredictionDataAdapter(
-                image_dir=image_dir,
-                prediction_csv=csv_path,
-                wsi_ids=wsi_ids_list
-            )
-        except Exception as adapter_error:
-            return JSONResponse({
-                "status": "error", 
-                "details": f"Error creating data adapter: {str(adapter_error)}"
-            }, status_code=400)
-        
-        # Simulate prediction results - limit to uploaded images only
-        import random
-        
-        sample_predictions = []
-        uploaded_images = set()
-        
-        # Get list of actually uploaded images
-        upload_dir = "uploads"
-        try:
-            if os.path.exists(upload_dir):
-                uploaded_files = [f for f in os.listdir(upload_dir) if f.endswith('.png')]
-                uploaded_images = {f.replace('.png', '') for f in uploaded_files}
-        except Exception as e:
-            print(f"Error reading upload directory: {e}")
-        
-        for i in range(len(prediction_adapter)):
-            try:
-                data_point = prediction_adapter[i]
-                image_name = f"{data_point.barcode}_{data_point.wsi_id}"
-                
-                # Only include if image was actually uploaded (or if we can't check, include all)
-                if not uploaded_images or image_name in uploaded_images:
-                    pred_result = {
-                        "barcode": data_point.barcode,
-                        "wsi_id": data_point.wsi_id,
-                        "x": data_point.x,
-                        "y": data_point.y,
-                        "image_path": data_point.img_patch_path
-                    }
-                    # Add realistic fake gene predictions (varied, not all same)
-                    for j, gene in enumerate(gene_ids_list):
-                        # Create more realistic varied predictions
-                        base_value = random.uniform(0.1, 2.8)
-                        noise = random.uniform(-0.3, 0.3)
-                        pred_result[gene] = round(max(0.0, base_value + noise), 3)
-                    sample_predictions.append(pred_result)
-            except FileNotFoundError as e:
-                # Skip missing images
-                print(f"Skipping missing image: {e}")
-                continue
-            except Exception as e:
-                print(f"Error processing data point {i}: {e}")
-                continue
-        
-        return JSONResponse({
-            "status": "success", 
-            "message": "✅ Prediction data flow test completed successfully",
-            "predictions_count": len(sample_predictions),
-            "requested_genes": gene_ids_list,
-            "processed_wsi_ids": wsi_ids_list,
-            "sample_predictions": sample_predictions,
-            "note": "These are test predictions. Use /predict/ for real model inference."
-        })
-        
-    except Exception as e:
-        return JSONResponse({"status": "error", "details": str(e)}, status_code=500)
+async def deprecated_test_predict():
+    raise HTTPException(status_code=410, detail="Deprecated. Use /predict/?allow_dummy=true if you need synthetic output.")
 
 @app.get("/health")
 def health():
@@ -514,3 +662,59 @@ async def get_image(filename: str):
         raise HTTPException(status_code=400, detail="Invalid image format")
     
     return FileResponse(file_path)
+
+@app.post("/upload/image/")
+async def upload_image(image: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """Upload a histology image (png/jpg/tif). Returns stored filename & url."""
+    try:
+        if not image.filename.lower().endswith((".png", ".jpg", ".jpeg", ".tiff", ".tif")):
+            raise HTTPException(status_code=400, detail="Unsupported image format")
+        safe_name = image.filename.replace(" ", "_")
+        save_path = os.path.join(UPLOAD_FOLDER, safe_name)
+        with open(save_path, "wb") as out:
+            out.write(await image.read())
+        size = os.path.getsize(save_path)
+        return {
+            "status": "success",
+            "filename": safe_name,
+            "url": f"/uploads/{safe_name}",
+            "size": size,
+            "user": current_user.username
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Image upload failed: {e}")
+
+@app.get("/api/convert-tiff/{filename}")
+async def convert_tiff_to_png(filename: str):
+    """Convert a TIFF file to PNG for browser display"""
+    try:
+        tiff_path = os.path.join(UPLOAD_FOLDER, filename)
+        
+        if not os.path.exists(tiff_path):
+            raise HTTPException(status_code=404, detail="TIFF file not found")
+        
+        # Generate PNG filename
+        png_filename = os.path.splitext(filename)[0] + ".png"
+        png_path = os.path.join(UPLOAD_FOLDER, png_filename)
+        
+        # Check if PNG already exists and is newer than TIFF
+        if os.path.exists(png_path):
+            tiff_mtime = os.path.getmtime(tiff_path)
+            png_mtime = os.path.getmtime(png_path)
+            if png_mtime > tiff_mtime:
+                return FileResponse(png_path, media_type="image/png")
+        
+        # Convert TIFF to PNG using PIL
+        from PIL import Image
+        with Image.open(tiff_path) as img:
+            # Convert to RGB if necessary (TIFF might be in different modes)
+            if img.mode not in ('RGB', 'RGBA'):
+                img = img.convert('RGB')
+            img.save(png_path, "PNG", optimize=True)
+        
+        return FileResponse(png_path, media_type="image/png")
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TIFF conversion failed: {e}")

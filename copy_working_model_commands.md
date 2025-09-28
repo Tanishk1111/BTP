@@ -67,3 +67,4 @@ chmod +x integrate_working_model.sh
 
 4. **Testing**: Test with a prediction request to verify the working model is loaded correctly
 
+

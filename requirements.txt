@@ -8,3 +8,10 @@ python-jose[cryptography]==3.3.0
 # pip install -e ..\\spatx_core  (if you have the repo locally)
 # or point to your GitHub URL
 
+# Model dependencies
+torch==2.2.2+cpu ; platform_system != 'Linux' and python_version >= '3.10' --extra-index-url https://download.pytorch.org/whl/cpu
+torchvision==0.17.2+cpu ; platform_system != 'Linux' and python_version >= '3.10' --extra-index-url https://download.pytorch.org/whl/cpu
+
+# On Linux with CUDA, override by installing: pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cu121
+Pillow==10.4.0
+
