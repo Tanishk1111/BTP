@@ -258,3 +258,36 @@ test_data.csv
 
 # Docker build artifacts
 .dockerignore
+
+# SpatX specific - unwanted directories and files
+archive/
+test_data/
+user_models/
+uploads/
+results/
+spatx_deployment.zip
+
+# Keep only essential markdown docs
+COMPLETED_FRONTEND_INTEGRATION.md
+FRONTEND_STATUS.md
+HEATMAP_IMPROVEMENTS.md
+HEATMAP_READY.md
+INTEGRATION_SUMMARY.md
+PATCH_EXTRACTION_FIXED.md
+PREDICTION_READY.md
+PRODUCTION_READY.md
+READY_TO_TEST.md
+WHAT_I_CHANGED.md
+TEST_YOUR_FRONTEND.md
+
+# Old/unused files
+init.sql
+main.py
+start_spatx.py
+test_full_heatmap.py
+test_prediction_only.py
+test_simple.py
+requirements_simple.txt
+
+# User-specific files
+user_*/

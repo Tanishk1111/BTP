@@ -684,37 +684,4 @@ async def upload_image(image: UploadFile = File(...), current_user: User = Depen
     except HTTPException:
         raise
     except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Image upload failed: {e}")
-
-@app.get("/api/convert-tiff/{filename}")
-async def convert_tiff_to_png(filename: str):
-    """Convert a TIFF file to PNG for browser display"""
-    try:
-        tiff_path = os.path.join(UPLOAD_FOLDER, filename)
-        
-        if not os.path.exists(tiff_path):
-            raise HTTPException(status_code=404, detail="TIFF file not found")
-        
-        # Generate PNG filename
-        png_filename = os.path.splitext(filename)[0] + ".png"
-        png_path = os.path.join(UPLOAD_FOLDER, png_filename)
-        
-        # Check if PNG already exists and is newer than TIFF
-        if os.path.exists(png_path):
-            tiff_mtime = os.path.getmtime(tiff_path)
-            png_mtime = os.path.getmtime(png_path)
-            if png_mtime > tiff_mtime:
-                return FileResponse(png_path, media_type="image/png")
-        
-        # Convert TIFF to PNG using PIL
-        from PIL import Image
-        with Image.open(tiff_path) as img:
-            # Convert to RGB if necessary (TIFF might be in different modes)
-            if img.mode not in ('RGB', 'RGBA'):
-                img = img.convert('RGB')
-            img.save(png_path, "PNG", optimize=True)
-        
-        return FileResponse(png_path, media_type="image/png")
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"TIFF conversion failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Image upload failed: {e}")

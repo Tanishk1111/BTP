@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+"""
+Pydantic models for SpatX Enhanced Platform
+"""
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
@@ -18,42 +22,25 @@ class UserResponse(BaseModel):
     email: str
     credits: float
     is_active: bool
-    is_admin: bool
     created_at: datetime
-    last_login: Optional[datetime]
-
+    last_login: Optional[datetime] = None
+    
     class Config:
         from_attributes = True
 
+# Token models
 class Token(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
 
-# Credit models
-class CreditUpdate(BaseModel):
-    user_id: int
-    credits_to_add: float
-    description: Optional[str] = None
-
-class CreditTransaction(BaseModel):
-    id: int
-    user_id: int
-    operation: str
-    credits_used: float
-    credits_remaining: float
-    description: Optional[str]
-    timestamp: datetime
-
-    class Config:
-        from_attributes = True
-
-# Training/Prediction cost configuration
+# Operation costs
 OPERATION_COSTS = {
-    "training": 5.0,      # 5 credits per training
-    "prediction": 1.0,    # 1 credit per prediction
+    "training": 5.0,
+    "prediction": 1.0,
+    "heatmap": 0.5,
 }
 
 def get_operation_cost(operation: str) -> float:
-    return OPERATION_COSTS.get(operation, 0.0)
-
+    """Get the cost of an operation in credits"""
+    return OPERATION_COSTS.get(operation, 1.0)

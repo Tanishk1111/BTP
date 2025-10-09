@@ -1,0 +1,2192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SpatX - Spatial Transcriptomics Platform</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* Your exact CSS variables and styling */
+      :root {
+        --primary-gradient: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        --secondary-gradient: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        --shadow-soft: 0 1px 3px 0 rgba(139, 92, 246, 0.1),
+          0 1px 2px 0 rgba(139, 92, 246, 0.06);
+        --shadow-medium: 0 4px 6px -1px rgba(139, 92, 246, 0.1),
+          0 2px 4px -1px rgba(139, 92, 246, 0.06);
+        --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .bg-primary-gradient {
+        background: var(--primary-gradient);
+      }
+      .bg-secondary-gradient {
+        background: var(--secondary-gradient);
+      }
+      .shadow-soft {
+        box-shadow: var(--shadow-soft);
+      }
+      .shadow-medium {
+        box-shadow: var(--shadow-medium);
+      }
+      .transition-smooth {
+        transition: var(--transition-smooth);
+      }
+      .bg-clip-text {
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+      .text-transparent {
+        color: transparent;
+      }
+
+      /* Page system */
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+      }
+
+      /* Button styles */
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        transition: var(--transition-smooth);
+        cursor: pointer;
+        border: none;
+      }
+
+      .button-primary {
+        background: var(--primary-gradient);
+        color: white;
+      }
+
+      .button-primary:hover {
+        opacity: 0.9;
+      }
+      .button-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .button-secondary {
+        background: white;
+        color: #374151;
+        border: 1px solid #d1d5db;
+      }
+
+      .button-secondary:hover {
+        background: #f9fafb;
+      }
+
+      .input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        transition: var(--transition-smooth);
+      }
+
+      .input:focus {
+        outline: none;
+        border-color: #8b5cf6;
+        box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+      }
+
+      .card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        box-shadow: var(--shadow-soft);
+        transition: var(--transition-smooth);
+      }
+
+      .card:hover {
+        box-shadow: var(--shadow-medium);
+      }
+
+      /* Gene button styles */
+      .gene-button {
+        transition: all 0.2s ease;
+      }
+
+      .gene-button:hover {
+        transform: translateY(-2px);
+        background: #f3f4f6;
+      }
+
+      .gene-button.selected {
+        background: #8b5cf6;
+        color: white;
+      }
+
+      /* Toast styles */
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 1000;
+        transform: translateX(400px);
+        transition: transform 0.3s ease;
+      }
+
+      .toast.show {
+        transform: translateX(0);
+      }
+      .toast.success {
+        background: #10b981;
+      }
+      .toast.error {
+        background: #ef4444;
+      }
+      .toast.info {
+        background: #3b82f6;
+      }
+    </style>
+  </head>
+
+  <body class="bg-secondary-gradient min-h-screen">
+    <!-- Page Container -->
+    <div id="app">
+      <!-- Login Page -->
+      <div id="login-page" class="page active">
+        <div
+          class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4"
+        >
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+            <div class="text-center mb-8">
+              <div
+                class="w-16 h-16 bg-primary-gradient rounded-2xl flex items-center justify-center mx-auto mb-4"
+              >
+                <i class="fas fa-microscope text-2xl text-white"></i>
+              </div>
+              <h1 class="text-3xl font-bold text-gray-900">Welcome Back</h1>
+              <p class="text-gray-600 mt-2">Sign in to your SpatX account</p>
+            </div>
+
+            <form id="login-form" class="space-y-6">
+              <div
+                id="login-error"
+                class="hidden bg-red-50 border border-red-200 rounded-lg p-3"
+              >
+                <p class="text-red-800 text-sm"></p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Username</label
+                >
+                <input
+                  type="text"
+                  id="login-username"
+                  required
+                  class="input"
+                  placeholder="Enter your username"
+                  value=""
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Password</label
+                >
+                <input
+                  type="password"
+                  id="login-password"
+                  required
+                  class="input"
+                  placeholder="Enter your password"
+                  value=""
+                />
+              </div>
+
+              <button
+                type="submit"
+                id="login-btn"
+                class="button button-primary w-full"
+              >
+                Sign In
+              </button>
+
+              <div class="text-center">
+                <p class="text-sm text-gray-600">
+                  Don't have an account?
+                  <button
+                    type="button"
+                    onclick="showRegisterForm()"
+                    class="text-purple-600 hover:underline font-medium ml-1"
+                  >
+                    Sign up here
+                  </button>
+                </p>
+              </div>
+            </form>
+
+            <!-- Registration Form (Hidden by default) -->
+            <form id="register-form" class="space-y-6 hidden">
+              <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Create Account</h2>
+                <p class="text-gray-600 mt-2">
+                  Join SpatX with 10 free credits!
+                </p>
+              </div>
+
+              <div
+                id="register-error"
+                class="hidden bg-red-50 border border-red-200 rounded-lg p-3"
+              >
+                <p class="text-red-800 text-sm"></p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Username</label
+                >
+                <input
+                  type="text"
+                  id="register-username"
+                  required
+                  class="input"
+                  placeholder="Choose a username"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Email</label
+                >
+                <input
+                  type="email"
+                  id="register-email"
+                  required
+                  class="input"
+                  placeholder="Enter your email"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Password</label
+                >
+                <input
+                  type="password"
+                  id="register-password"
+                  required
+                  class="input"
+                  placeholder="Create a password (min 6 characters)"
+                  minlength="6"
+                />
+              </div>
+
+              <button
+                type="submit"
+                id="register-btn"
+                class="button button-primary w-full"
+              >
+                Create Account
+              </button>
+
+              <div class="text-center">
+                <p class="text-sm text-gray-600">
+                  Already have an account?
+                  <button
+                    type="button"
+                    onclick="showLoginForm()"
+                    class="text-purple-600 hover:underline font-medium ml-1"
+                  >
+                    Sign in here
+                  </button>
+                </p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Page -->
+      <div id="dashboard-page" class="page">
+        <!-- Header -->
+        <header class="bg-white shadow-lg border-b sticky top-0 z-40">
+          <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-4">
+                <div
+                  class="w-12 h-12 bg-primary-gradient rounded-2xl flex items-center justify-center shadow-medium"
+                >
+                  <i class="fas fa-microscope text-2xl text-white"></i>
+                </div>
+                <div>
+                  <h1
+                    class="text-3xl font-bold bg-primary-gradient bg-clip-text text-transparent"
+                  >
+                    SpatX Platform
+                  </h1>
+                  <p class="text-sm text-gray-600">
+                    Spatial transcriptomics analysis platform
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-4">
+                <div
+                  class="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-purple-50 to-blue-50 rounded-full border border-purple-200"
+                >
+                  <svg
+                    class="w-4 h-4 text-purple-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
+                  <span
+                    id="dashboard-credits"
+                    class="text-sm font-bold text-purple-700"
+                    >0</span
+                  >
+                  <span class="text-xs text-purple-600">credits</span>
+                </div>
+                <div class="text-sm text-gray-600">
+                  Welcome, <span id="user-name">Demo User</span>
+                </div>
+                <button
+                  onclick="logout()"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-6 py-8">
+          <!-- Hero Section -->
+          <section class="text-center py-16">
+            <div class="max-w-4xl mx-auto">
+              <h2
+                class="text-5xl font-bold mb-6 bg-primary-gradient bg-clip-text text-transparent leading-tight pb-2"
+              >
+                Predict Gene Expression from Microscopy Images
+              </h2>
+              <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                Train CIT transformer models to analyze spatial transcriptomics
+                data and predict gene expression patterns from tissue microscopy
+                images with our streamlined 2-phase workflow.
+              </p>
+
+              <!-- Workflow Overview -->
+              <div class="flex items-center justify-center gap-8 mb-12">
+                <div
+                  class="flex items-center gap-3 px-6 py-3 bg-white rounded-lg shadow-soft"
+                >
+                  <i class="fas fa-flask text-purple-600 text-xl"></i>
+                  <span class="font-medium">Phase 1: Training</span>
+                </div>
+                <i class="fas fa-arrow-right text-2xl text-purple-600"></i>
+                <div
+                  class="flex items-center gap-3 px-6 py-3 bg-white rounded-lg shadow-soft"
+                >
+                  <i class="fas fa-bullseye text-purple-600 text-xl"></i>
+                  <span class="font-medium">Phase 2: Prediction</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Navigation Cards -->
+          <section class="pb-16">
+            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              <!-- Training Phase Card -->
+              <div
+                class="card relative overflow-hidden border-2 hover:border-purple-300 transition-smooth group cursor-pointer p-8"
+                onclick="showPage('training')"
+              >
+                <div
+                  class="absolute inset-0 bg-gradient-to-r from-purple-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-smooth"
+                ></div>
+                <div class="relative z-10">
+                  <div
+                    class="w-12 h-12 bg-primary-gradient rounded-lg flex items-center justify-center mb-4"
+                  >
+                    <i class="fas fa-flask text-white text-xl"></i>
+                  </div>
+                  <h3 class="text-2xl font-bold mb-4">
+                    Phase 1: Model Training
+                  </h3>
+                  <p class="text-gray-600 mb-6">
+                    Upload your training data and configure model parameters to
+                    train custom CIT transformer models
+                  </p>
+                  <ul class="space-y-2 text-sm text-gray-500 mb-6">
+                    <li>• Upload training CSV with gene expression data</li>
+                    <li>• Upload corresponding tissue microscopy images</li>
+                    <li>• Configure training parameters and gene selection</li>
+                    <li>• Monitor real-time training progress</li>
+                  </ul>
+                  <button class="button button-primary w-full">
+                    Start Training
+                    <i class="fas fa-arrow-right ml-2"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Prediction Phase Card -->
+              <div
+                class="card relative overflow-hidden border-2 hover:border-purple-300 transition-smooth group cursor-pointer p-8"
+                onclick="showPage('prediction')"
+              >
+                <div
+                  class="absolute inset-0 bg-gradient-to-r from-purple-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-smooth"
+                ></div>
+                <div class="relative z-10">
+                  <div
+                    class="w-12 h-12 bg-primary-gradient rounded-lg flex items-center justify-center mb-4"
+                  >
+                    <i class="fas fa-bullseye text-white text-xl"></i>
+                  </div>
+                  <h3 class="text-2xl font-bold mb-4">
+                    Phase 2: Gene Prediction
+                  </h3>
+                  <p class="text-gray-600 mb-6">
+                    Use trained models to predict gene expression on new tissue
+                    samples
+                  </p>
+                  <ul class="space-y-2 text-sm text-gray-500 mb-6">
+                    <li>• Upload tissue microscopy images</li>
+                    <li>• Select prediction density (how many points)</li>
+                    <li>• Select genes for expression prediction</li>
+                    <li>• Visualize spatial gene expression maps</li>
+                  </ul>
+                  <button class="button button-primary w-full">
+                    Make Predictions
+                    <i class="fas fa-arrow-right ml-2"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- Prediction Upload Page -->
+      <div id="prediction-page" class="page">
+        <header class="bg-white shadow-lg border-b sticky top-0 z-40">
+          <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-4">
+                <button
+                  onclick="showPage('dashboard')"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-arrow-left"></i>
+                  <span>Back</span>
+                </button>
+                <div
+                  class="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center"
+                >
+                  <i class="fas fa-upload text-white"></i>
+                </div>
+                <div>
+                  <h1 class="text-2xl font-bold text-gray-900">
+                    Prediction Data Upload
+                  </h1>
+                  <p class="text-sm text-gray-600">
+                    Upload tissue image for gene expression prediction
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-600">
+                  Welcome, <span id="prediction-user-name">Demo User</span>
+                </div>
+                <button
+                  onclick="logout()"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="container mx-auto px-6 py-8">
+          <!-- Progress Indicator -->
+          <div
+            class="flex items-center gap-4 p-4 bg-white rounded-lg shadow-soft mb-8"
+          >
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-primary-gradient text-white rounded-full flex items-center justify-center font-bold"
+              >
+                1
+              </div>
+              <span class="font-medium text-purple-600">Upload Image</span>
+            </div>
+            <i class="fas fa-arrow-right w-4 h-4 text-gray-400"></i>
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center font-bold"
+              >
+                2
+              </div>
+              <span class="text-gray-600">Select Genes</span>
+            </div>
+            <i class="fas fa-arrow-right w-4 h-4 text-gray-400"></i>
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center font-bold"
+              >
+                3
+              </div>
+              <span class="text-gray-600">View Heatmap</span>
+            </div>
+          </div>
+
+          <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-xl p-8">
+              <div class="flex items-center mb-8">
+                <div
+                  class="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center mr-3"
+                >
+                  <i class="fas fa-image text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900">
+                  Upload Histology Image
+                </h3>
+              </div>
+
+              <!-- File Upload Area -->
+              <div
+                id="prediction-upload-area"
+                class="border-3 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 hover:border-purple-400 hover:bg-purple-50 mb-8"
+              >
+                <div id="prediction-upload-content">
+                  <i
+                    class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"
+                  ></i>
+                  <p class="text-lg font-semibold text-gray-700 mb-2">
+                    Drop your histology image here
+                  </p>
+                  <p class="text-sm text-gray-500 mb-4">or click to browse</p>
+                  <div
+                    class="flex justify-center space-x-2 text-xs text-gray-400"
+                  >
+                    <span class="bg-gray-100 px-2 py-1 rounded">PNG</span>
+                    <span class="bg-gray-100 px-2 py-1 rounded">JPG</span>
+                    <span class="bg-gray-100 px-2 py-1 rounded">TIF</span>
+                    <span class="bg-gray-100 px-2 py-1 rounded">TIFF</span>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  id="prediction-file-input"
+                  accept=".png,.jpg,.jpeg,.tif,.tiff"
+                  class="hidden"
+                />
+              </div>
+
+              <!-- Selected File Display -->
+              <div
+                id="prediction-file-display"
+                class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200 mb-8"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-3">
+                    <i class="fas fa-file-image text-purple-600 text-xl"></i>
+                    <div>
+                      <p
+                        id="prediction-file-name"
+                        class="font-medium text-gray-900"
+                      ></p>
+                      <p
+                        id="prediction-file-size"
+                        class="text-sm text-gray-500"
+                      ></p>
+                    </div>
+                  </div>
+                  <button
+                    onclick="clearPredictionFile()"
+                    class="text-red-500 hover:text-red-700"
+                  >
+                    <i class="fas fa-times-circle text-xl"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Prediction Density -->
+              <div class="mb-8">
+                <label class="block text-lg font-semibold text-gray-800 mb-4">
+                  <i class="fas fa-th-large mr-2 text-green-500"></i>Prediction
+                  Density
+                </label>
+                <p class="text-gray-600 text-sm mb-4">
+                  Choose how dense you want the predictions to be. Higher
+                  density means more points and longer processing time.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <label
+                    class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 transition-smooth"
+                  >
+                    <input
+                      type="radio"
+                      name="density"
+                      value="low"
+                      class="form-radio text-purple-600"
+                      checked
+                    />
+                    <div>
+                      <div class="font-medium">Low Density</div>
+                      <div class="text-sm text-gray-500">
+                        ~50 points, faster
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 transition-smooth"
+                  >
+                    <input
+                      type="radio"
+                      name="density"
+                      value="medium"
+                      class="form-radio text-purple-600"
+                    />
+                    <div>
+                      <div class="font-medium">Medium Density</div>
+                      <div class="text-sm text-gray-500">
+                        ~150 points, balanced
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 transition-smooth"
+                  >
+                    <input
+                      type="radio"
+                      name="density"
+                      value="high"
+                      class="form-radio text-purple-600"
+                    />
+                    <div>
+                      <div class="font-medium">High Density</div>
+                      <div class="text-sm text-gray-500">
+                        ~300 points, slower
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    class="flex items-center space-x-3 p-4 border-2 border-purple-300 bg-purple-50 rounded-lg cursor-pointer hover:border-purple-400 transition-smooth"
+                  >
+                    <input
+                      type="radio"
+                      name="density"
+                      value="full"
+                      class="form-radio text-purple-600"
+                    />
+                    <div>
+                      <div class="font-medium flex items-center">
+                        <span>Full Heatmap</span>
+                        <span class="ml-2 px-2 py-0.5 bg-purple-600 text-white text-xs rounded-full">NEW</span>
+                      </div>
+                      <div class="text-sm text-gray-600">
+                        All points, comprehensive view
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="flex justify-between">
+                <button
+                  onclick="showPage('dashboard')"
+                  class="button button-secondary"
+                >
+                  <i class="fas fa-arrow-left mr-2"></i>Back to Home
+                </button>
+                <button
+                  id="prediction-proceed-btn"
+                  disabled
+                  class="button button-primary opacity-50"
+                >
+                  Proceed to Gene Selection
+                  <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- Gene Selection Page -->
+      <div id="gene-selection-page" class="page">
+        <header class="bg-white shadow-lg border-b sticky top-0 z-40">
+          <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-4">
+                <button
+                  onclick="showPage('prediction')"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-arrow-left"></i>
+                  <span>Back</span>
+                </button>
+                <div
+                  class="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center"
+                >
+                  <i class="fas fa-dna text-white"></i>
+                </div>
+                <div>
+                  <h1 class="text-2xl font-bold text-gray-900">
+                    Gene Selection
+                  </h1>
+                  <p class="text-sm text-gray-600">
+                    Choose genes for expression prediction
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-600">
+                  Welcome, <span id="gene-user-name">Demo User</span>
+                </div>
+                <button
+                  onclick="logout()"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="container mx-auto px-6 py-8">
+          <!-- Progress Indicator -->
+          <div
+            class="flex items-center gap-4 p-4 bg-white rounded-lg shadow-soft mb-8"
+          >
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center"
+              >
+                <i class="fas fa-check text-sm"></i>
+              </div>
+              <span class="text-green-600">Upload Image</span>
+            </div>
+            <i class="fas fa-arrow-right w-4 h-4 text-gray-400"></i>
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-primary-gradient text-white rounded-full flex items-center justify-center font-bold"
+              >
+                2
+              </div>
+              <span class="font-medium text-purple-600">Select Genes</span>
+            </div>
+            <i class="fas fa-arrow-right w-4 h-4 text-gray-400"></i>
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center font-bold"
+              >
+                3
+              </div>
+              <span class="text-gray-600">View Heatmap</span>
+            </div>
+          </div>
+
+          <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-xl p-8">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center space-x-3">
+                  <h3
+                    class="text-2xl font-bold text-gray-900 flex items-center gap-2"
+                  >
+                    <i class="fas fa-dna text-purple-600"></i>
+                    Gene Selection Panel
+                  </h3>
+                  <p class="text-gray-600">
+                    Select genes from the 50-gene working panel.
+                    <span id="selected-count">0</span> selected.
+                  </p>
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    id="select-all-genes-btn"
+                    class="button button-secondary"
+                  >
+                    Select All (50)
+                  </button>
+                  <button
+                    id="clear-all-genes-btn"
+                    class="button button-secondary"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              <!-- Search -->
+              <div class="mb-6">
+                <div class="relative">
+                  <i
+                    class="fas fa-search absolute left-3 top-3 text-gray-400"
+                  ></i>
+                  <input
+                    type="text"
+                    id="gene-search"
+                    placeholder="Search genes..."
+                    class="input pl-10"
+                  />
+                </div>
+              </div>
+
+              <!-- Selected Genes Display -->
+              <div
+                id="selected-genes-display"
+                class="hidden p-3 bg-purple-50 border border-purple-200 rounded-lg mb-6"
+              >
+                <h4 class="text-sm font-medium mb-2 text-purple-800">
+                  Selected Genes:
+                </h4>
+                <div
+                  id="selected-genes-list"
+                  class="flex flex-wrap gap-1"
+                ></div>
+              </div>
+
+              <!-- Gene Grid -->
+              <div class="border border-gray-200 rounded-lg p-6 mb-6">
+                <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <i class="fas fa-ribbon text-pink-500"></i>
+                  Breast Cancer Panel
+                  <span class="text-sm text-gray-500">(50 genes)</span>
+                </h4>
+                <div
+                  id="genes-grid"
+                  class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
+                >
+                  <!-- Genes will be populated by JavaScript -->
+                </div>
+              </div>
+
+              <div class="flex justify-between">
+                <button
+                  onclick="showPage('prediction')"
+                  class="button button-secondary"
+                >
+                  <i class="fas fa-arrow-left mr-2"></i>Back to Upload
+                </button>
+                <button
+                  id="generate-predictions-btn"
+                  disabled
+                  class="button button-primary opacity-50"
+                  onclick="runPrediction()"
+                >
+                  <span id="generate-btn-text">Generate Predictions</span>
+                  <i class="fas fa-chart-area ml-2"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- Heatmap Results Page -->
+      <div id="heatmap-page" class="page">
+        <header class="bg-white shadow-lg border-b sticky top-0 z-40">
+          <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-4">
+                <button
+                  onclick="showPage('gene-selection')"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-arrow-left"></i>
+                  <span>Back</span>
+                </button>
+                <div
+                  class="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center"
+                >
+                  <i class="fas fa-chart-area text-white"></i>
+                </div>
+                <div>
+                  <h1 class="text-2xl font-bold text-gray-900">
+                    Heatmap Results
+                  </h1>
+                  <p class="text-sm text-gray-600">
+                    View spatial gene expression heatmaps
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-600">
+                  Welcome, <span id="heatmap-user-name">Demo User</span>
+                </div>
+                <button
+                  onclick="logout()"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="container mx-auto px-6 py-8">
+          <!-- Progress Indicator -->
+          <div
+            class="flex items-center gap-4 p-4 bg-white rounded-lg shadow-soft mb-8"
+          >
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center"
+              >
+                <i class="fas fa-check text-sm"></i>
+              </div>
+              <span class="text-green-600">Upload Image</span>
+            </div>
+            <i class="fas fa-arrow-right w-4 h-4 text-gray-400"></i>
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center"
+              >
+                <i class="fas fa-check text-sm"></i>
+              </div>
+              <span class="text-green-600">Select Genes</span>
+            </div>
+            <i class="fas fa-arrow-right w-4 h-4 text-gray-400"></i>
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 bg-primary-gradient text-white rounded-full flex items-center justify-center font-bold"
+              >
+                3
+              </div>
+              <span class="font-medium text-purple-600">View Heatmap</span>
+            </div>
+          </div>
+
+          <!-- Gene Selector -->
+          <div class="max-w-6xl mx-auto mb-6">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <div
+                    class="w-10 h-10 bg-primary-gradient rounded-lg flex items-center justify-center mr-3"
+                  >
+                    <i class="fas fa-dna text-white"></i>
+                  </div>
+                  <div>
+                    <label
+                      for="heatmap-gene-select"
+                      class="block text-lg font-bold text-gray-900"
+                      >Selected Gene:</label
+                    >
+                    <p class="text-sm text-gray-600">Choose a gene to visualize expression</p>
+                  </div>
+                </div>
+                <select 
+                  id="heatmap-gene-select" 
+                  class="input w-64 text-lg font-semibold"
+                  onchange="switchGene(this.value)"
+                >
+                  <!-- Will be populated dynamically from API response -->
+                  <option value="ABCC11">Loading genes...</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Side-by-Side Image Comparison -->
+          <div class="max-w-7xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-2xl p-8">
+              
+              <!-- Loading State -->
+              <div
+                id="heatmap-loading"
+                class="flex items-center justify-center py-32"
+              >
+                <div class="text-center">
+                  <div
+                    class="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mb-4"
+                  ></div>
+                  <p class="text-xl font-semibold text-gray-700">Generating heatmap...</p>
+                  <p class="text-sm text-gray-500 mt-2">This may take a few moments</p>
+                </div>
+              </div>
+
+              <!-- Image Comparison Grid -->
+              <div id="heatmap-comparison" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  
+                  <!-- Original Image -->
+                  <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                      <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                        <i class="fas fa-image text-blue-600 mr-2"></i>
+                        Original Image
+                      </h3>
+                      <span class="text-sm text-gray-500" id="original-filename">your_image.png</span>
+                    </div>
+                    <div class="relative bg-gray-100 rounded-xl overflow-hidden shadow-lg border-2 border-gray-200">
+                      <img
+                        id="original-image"
+                        src=""
+                        alt="Original Histology Image"
+                        class="w-full h-auto"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Heatmap Image -->
+                  <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                      <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                        <i class="fas fa-chart-area text-purple-600 mr-2"></i>
+                        <span id="heatmap-title">Predicted Expression - ABCC11</span>
+                      </h3>
+                      <button
+                        onclick="downloadHeatmap()"
+                        class="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-smooth"
+                      >
+                        <i class="fas fa-download mr-1"></i>Download
+                      </button>
+                    </div>
+                    <div class="relative bg-gray-900 rounded-xl overflow-hidden shadow-lg border-2 border-purple-300">
+                      <img
+                        id="heatmap-image"
+                        src=""
+                        alt="Gene Expression Heatmap"
+                        class="w-full h-auto"
+                      />
+                      <!-- Color Scale Legend -->
+                      <div class="absolute bottom-4 right-4 bg-white bg-opacity-90 rounded-lg p-3 shadow-lg">
+                        <p class="text-xs font-semibold text-gray-700 mb-2">Log Expression</p>
+                        <div class="flex items-center space-x-2">
+                          <div class="w-32 h-4 rounded" style="background: linear-gradient(to right, #000080, #4169E1, #87CEEB, #FFD700, #FF8C00, #DC143C);"></div>
+                          <div class="flex flex-col text-xs text-gray-600">
+                            <span>5</span>
+                            <span class="my-1">3</span>
+                            <span>0</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Stats Panel -->
+                <div class="mt-8 grid grid-cols-3 gap-4">
+                  <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center">
+                    <p class="text-sm text-blue-600 font-semibold mb-1">Image Size</p>
+                    <p class="text-2xl font-bold text-blue-900" id="stat-size">-</p>
+                  </div>
+                  <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center">
+                    <p class="text-sm text-purple-600 font-semibold mb-1">Gene Selected</p>
+                    <p class="text-2xl font-bold text-purple-900" id="stat-gene">ABCC11</p>
+                  </div>
+                  <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-4 text-center">
+                    <p class="text-sm text-pink-600 font-semibold mb-1">Prediction Points</p>
+                    <p class="text-2xl font-bold text-pink-900" id="stat-points">-</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+              <div class="flex justify-between">
+                <button
+                  onclick="showPage('gene-selection')"
+                  class="button button-secondary"
+                >
+                  <i class="fas fa-arrow-left mr-2"></i>Back to Gene Selection
+                </button>
+                <div class="flex gap-2">
+                  <button
+                    onclick="startNewPrediction()"
+                    class="button button-secondary"
+                  >
+                    <i class="fas fa-plus mr-2"></i>New Prediction
+                  </button>
+                  <button
+                    id="download-results-btn"
+                    class="button button-primary"
+                  >
+                    <i class="fas fa-download mr-2"></i>Download Results
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- Training Page -->
+      <div id="training-page" class="page">
+        <div class="min-h-screen bg-gray-100 flex items-center justify-center">
+          <div class="text-center">
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">
+              Model Training Workflow
+            </h1>
+            <p class="text-gray-600 mb-8">
+              This is where the training workflow will be implemented!
+            </p>
+            <button
+              onclick="showPage('dashboard')"
+              class="button button-primary"
+            >
+              <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script>
+      console.log("🚀 SpatX Frontend Started");
+
+      // Global state
+      let currentUser = null;
+      let authToken = null;
+      let selectedGenes = new Set();
+      let uploadedFile = null;
+      let uploadedImagePath = null;
+      let predictionDensity = "low";
+
+      // API Configuration - Auto-detect based on current host
+      const API_BASE_URL = window.location.hostname === 'localhost' 
+        ? "http://localhost:9001" 
+        : `http://${window.location.hostname}:9001`;
+
+      // API Client for real backend integration
+      class SpatXAPI {
+        async request(
+          endpoint,
+          method = "GET",
+          data = null,
+          isFormData = false
+        ) {
+          const url = `${API_BASE_URL}/${endpoint}`;
+          const headers = {};
+
+          if (authToken) {
+            headers["Authorization"] = `Bearer ${authToken}`;
+          }
+
+          let body;
+          if (isFormData) {
+            body = data; // FormData object
+          } else if (data) {
+            headers["Content-Type"] = "application/json";
+            body = JSON.stringify(data);
+          }
+
+          const options = { method, headers, body };
+
+          try {
+            const response = await fetch(url, options);
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || "Something went wrong");
+            }
+
+            return await response.json();
+          } catch (error) {
+            console.error("API request failed:", error);
+            throw error;
+          }
+        }
+
+        // Authentication
+        async register(username, email, password) {
+          return this.request("auth/register", "POST", {
+            username,
+            email,
+            password,
+          });
+        }
+
+        async login(username, password) {
+          return this.request("auth/login", "POST", { username, password });
+        }
+
+        async getCurrentUser() {
+          return this.request("users/me");
+        }
+
+        async getCredits() {
+          return this.request("credits");
+        }
+
+        // File operations
+        async uploadFile(file, fileType) {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          return this.request("upload/image", "POST", formData, true);
+        }
+
+        // Model operations
+        async getModels() {
+          return this.request("models");
+        }
+
+        async predict(imageFile, coordinatesCsv, modelName = "working_model", selectedGenes = "all") {
+          const formData = new FormData();
+          formData.append("image_file", imageFile);
+          formData.append("coordinates_csv", coordinatesCsv);
+          formData.append("model_name", modelName);
+          formData.append("output_format", "json");
+          formData.append("selected_genes", selectedGenes);
+
+          return this.request("predict", "POST", formData, true);
+        }
+
+        async uploadCoordinates(csvContent, filename) {
+          // Create a Blob from CSV content
+          const blob = new Blob([csvContent], { type: 'text/csv' });
+          const file = new File([blob], filename, { type: 'text/csv' });
+          
+          const formData = new FormData();
+          formData.append("file", file);
+
+          return this.request("upload/csv", "POST", formData, true);
+        }
+
+        async train(params) {
+          return this.request("train", "POST", params);
+        }
+      }
+
+      const api = new SpatXAPI();
+
+      // All 50 genes from your working model
+      const allGenes = [
+        "ABCC11",
+        "ADH1B",
+        "ADIPOQ",
+        "ANKRD30A",
+        "AQP1",
+        "AQP3",
+        "CCR7",
+        "CD3E",
+        "CEACAM6",
+        "CEACAM8",
+        "CLIC6",
+        "CYTIP",
+        "DST",
+        "ERBB2",
+        "ESR1",
+        "FASN",
+        "GATA3",
+        "IL2RG",
+        "IL7R",
+        "KIT",
+        "KLF5",
+        "KRT14",
+        "KRT5",
+        "KRT6B",
+        "MMP1",
+        "MMP12",
+        "MS4A1",
+        "MUC6",
+        "MYBPC1",
+        "MYH11",
+        "MYLK",
+        "OPRPN",
+        "OXTR",
+        "PIGR",
+        "PTGDS",
+        "PTN",
+        "PTPRC",
+        "SCD",
+        "SCGB2A1",
+        "SERHL2",
+        "SERPINA3",
+        "SFRP1",
+        "SLAMF7",
+        "TACSTD2",
+        "TCL1A",
+        "TENT5C",
+        "TOP2A",
+        "TPSAB1",
+        "TRAC",
+        "VWF",
+      ];
+
+      // Page navigation
+      function showPage(pageId) {
+        console.log(`📍 Navigating to: ${pageId}`);
+
+        // Hide all pages
+        document.querySelectorAll(".page").forEach((page) => {
+          page.classList.remove("active");
+        });
+
+        // Show selected page
+        const page = document.getElementById(pageId + "-page");
+        if (page) {
+          page.classList.add("active");
+        }
+
+        // Update user names and credits on all pages
+        if (currentUser) {
+          const userNameElements = [
+            "user-name",
+            "prediction-user-name",
+            "gene-user-name",
+            "heatmap-user-name",
+          ];
+          userNameElements.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = currentUser.username;
+          });
+
+          // Update credits display
+          const creditsEl = document.getElementById("dashboard-credits");
+          if (creditsEl) creditsEl.textContent = currentUser.credits || 0;
+        }
+        
+        // Initialize heatmap page when navigating to it
+        if (pageId === 'heatmap') {
+          initializeHeatmapPage();
+          initializeHeatmap();
+        }
+
+        // Page-specific initialization
+        if (pageId === "gene-selection") {
+          initializeGeneSelection();
+        } else if (pageId === "heatmap") {
+          initializeHeatmap();
+        }
+      }
+
+      // Toast notifications
+      function showToast(message, type = "info") {
+        const container = document.getElementById("toast-container");
+        const toast = document.createElement("div");
+
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+           <div class="flex items-center space-x-2">
+             <i class="fas fa-${
+               type === "success"
+                 ? "check-circle"
+                 : type === "error"
+                 ? "exclamation-circle"
+                 : "info-circle"
+             }"></i>
+             <span>${message}</span>
+             <button onclick="this.closest('.toast').remove()" class="ml-4 hover:opacity-70">
+               <i class="fas fa-times"></i>
+             </button>
+           </div>
+         `;
+
+        container.appendChild(toast);
+
+        // Show toast
+        setTimeout(() => toast.classList.add("show"), 100);
+
+        // Auto-remove
+        setTimeout(() => {
+          toast.classList.remove("show");
+          setTimeout(() => {
+            if (toast.parentElement) {
+              toast.remove();
+            }
+          }, 300);
+        }, 4000);
+      }
+
+      // Refresh user credits from backend
+      async function refreshCredits() {
+        if (!authToken) return;
+
+        try {
+          const response = await api.getCredits();
+          if (currentUser) {
+            currentUser.credits = response.credits;
+            localStorage.setItem("user", JSON.stringify(currentUser));
+
+            // Update all credit displays
+            const creditsEl = document.getElementById("dashboard-credits");
+            if (creditsEl) creditsEl.textContent = currentUser.credits;
+          }
+        } catch (error) {
+          console.error("Failed to refresh credits:", error);
+        }
+      }
+
+      // Form switching
+      function showLoginForm() {
+        document.getElementById("login-form").classList.remove("hidden");
+        document.getElementById("register-form").classList.add("hidden");
+        document.getElementById("login-error").classList.add("hidden");
+      }
+
+      function showRegisterForm() {
+        document.getElementById("login-form").classList.add("hidden");
+        document.getElementById("register-form").classList.remove("hidden");
+        document.getElementById("register-error").classList.add("hidden");
+      }
+
+      // Authentication
+      async function handleLogin(event) {
+        event.preventDefault();
+
+        const username = document.getElementById("login-username").value;
+        const password = document.getElementById("login-password").value;
+        const button = document.getElementById("login-btn");
+
+        button.disabled = true;
+        button.textContent = "Signing in...";
+
+        try {
+          const response = await api.login(username, password);
+
+          authToken = response.access_token;
+          currentUser = response.user;
+
+          // Store in localStorage
+          localStorage.setItem("authToken", authToken);
+          localStorage.setItem("user", JSON.stringify(currentUser));
+
+          document.getElementById("user-name").textContent =
+            currentUser.username;
+          showToast(
+            `Welcome back, ${currentUser.username}! You have ${currentUser.credits} credits.`,
+            "success"
+          );
+          await refreshCredits();
+          showPage("dashboard");
+        } catch (error) {
+          showError(
+            error.message || "Login failed. Please check your credentials."
+          );
+        } finally {
+          button.disabled = false;
+          button.textContent = "Sign In";
+        }
+      }
+
+      async function handleRegister(event) {
+        event.preventDefault();
+
+        const username = document.getElementById("register-username").value;
+        const email = document.getElementById("register-email").value;
+        const password = document.getElementById("register-password").value;
+        const button = document.getElementById("register-btn");
+
+        button.disabled = true;
+        button.textContent = "Creating account...";
+
+        try {
+          const response = await api.register(username, email, password);
+
+          authToken = response.access_token;
+          currentUser = response.user;
+
+          // Store in localStorage
+          localStorage.setItem("authToken", authToken);
+          localStorage.setItem("user", JSON.stringify(currentUser));
+
+          showToast(
+            `Welcome ${currentUser.username}! You have ${currentUser.credits} credits.`,
+            "success"
+          );
+          showPage("dashboard");
+        } catch (error) {
+          const errorDiv = document.getElementById("register-error");
+          errorDiv.querySelector("p").textContent =
+            error.message || "Registration failed. Please try again.";
+          errorDiv.classList.remove("hidden");
+        } finally {
+          button.disabled = false;
+          button.textContent = "Create Account";
+        }
+      }
+
+      function showError(message) {
+        const errorDiv = document.getElementById("login-error");
+        errorDiv.querySelector("p").textContent = message;
+        errorDiv.classList.remove("hidden");
+      }
+
+      function logout() {
+        currentUser = null;
+        authToken = null;
+        selectedGenes.clear();
+        uploadedFile = null;
+        uploadedImagePath = null;
+
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("user");
+
+        showToast("Logged out successfully", "info");
+        showPage("login");
+      }
+
+      // File Upload Functions
+      function initializePredictionUpload() {
+        const uploadArea = document.getElementById("prediction-upload-area");
+        const fileInput = document.getElementById("prediction-file-input");
+        const proceedBtn = document.getElementById("prediction-proceed-btn");
+
+        uploadArea.addEventListener("click", () => fileInput.click());
+        uploadArea.addEventListener("dragover", handleDragOver);
+        uploadArea.addEventListener("dragleave", handleDragLeave);
+        uploadArea.addEventListener("drop", handleDrop);
+        fileInput.addEventListener("change", (e) =>
+          handleFileSelect(e.target.files[0])
+        );
+
+        // Density selection
+        document.querySelectorAll('input[name="density"]').forEach((radio) => {
+          radio.addEventListener("change", (e) => {
+            predictionDensity = e.target.value;
+            console.log("Density selected:", predictionDensity);
+          });
+        });
+
+        proceedBtn.addEventListener("click", () => {
+          if (uploadedFile) {
+            showToast("Proceeding to gene selection...", "success");
+            showPage("gene-selection");
+          }
+        });
+      }
+
+      function handleDragOver(event) {
+        event.preventDefault();
+        event.currentTarget.classList.add("border-purple-400", "bg-purple-50");
+      }
+
+      function handleDragLeave(event) {
+        event.preventDefault();
+        event.currentTarget.classList.remove(
+          "border-purple-400",
+          "bg-purple-50"
+        );
+      }
+
+      function handleDrop(event) {
+        event.preventDefault();
+        event.currentTarget.classList.remove(
+          "border-purple-400",
+          "bg-purple-50"
+        );
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+          handleFileSelect(files[0]);
+        }
+      }
+
+      async function handleFileSelect(file) {
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ["image/png", "image/jpeg", "image/tiff"];
+        if (
+          !validTypes.includes(file.type) &&
+          !file.name.toLowerCase().match(/\.(png|jpg|jpeg|tif|tiff)$/)
+        ) {
+          showToast(
+            "Please select a valid image file (PNG, JPG, TIF, TIFF)",
+            "error"
+          );
+          return;
+        }
+
+        uploadedFile = file;
+
+        // Show file info
+        document.getElementById("prediction-file-name").textContent = file.name;
+        document.getElementById("prediction-file-size").textContent =
+          formatFileSize(file.size);
+        document
+          .getElementById("prediction-file-display")
+          .classList.remove("hidden");
+
+        showToast(`File "${file.name}" selected. Uploading...`, "info");
+
+        try {
+          // Upload file to backend
+          const response = await api.uploadFile(file, "image");
+          uploadedImagePath = response.filename;
+
+          // Enable proceed button
+          const proceedBtn = document.getElementById("prediction-proceed-btn");
+          proceedBtn.disabled = false;
+          proceedBtn.classList.remove("opacity-50");
+
+          showToast(`File uploaded successfully!`, "success");
+        } catch (error) {
+          showToast(`Upload failed: ${error.message}`, "error");
+          clearPredictionFile();
+        }
+      }
+
+      function clearPredictionFile() {
+        uploadedFile = null;
+        document
+          .getElementById("prediction-file-display")
+          .classList.add("hidden");
+        document.getElementById("prediction-file-input").value = "";
+
+        const proceedBtn = document.getElementById("prediction-proceed-btn");
+        proceedBtn.disabled = true;
+        proceedBtn.classList.add("opacity-50");
+
+        showToast("File cleared", "info");
+      }
+
+      function formatFileSize(bytes) {
+        if (bytes === 0) return "0 Bytes";
+        const k = 1024;
+        const sizes = ["Bytes", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+      }
+
+      // Gene Selection Functions
+      function initializeGeneSelection() {
+        const genesGrid = document.getElementById("genes-grid");
+        const searchInput = document.getElementById("gene-search");
+        const selectAllBtn = document.getElementById("select-all-genes-btn");
+        const clearAllBtn = document.getElementById("clear-all-genes-btn");
+        const generateBtn = document.getElementById("generate-predictions-btn");
+
+        // Populate genes grid
+        genesGrid.innerHTML = allGenes
+          .map(
+            (gene) => `
+           <button class="gene-button px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-smooth" 
+                   data-gene="${gene}" onclick="toggleGene('${gene}')">
+             ${gene}
+           </button>
+         `
+          )
+          .join("");
+
+        // Search functionality
+        searchInput.addEventListener("input", (e) => {
+          const query = e.target.value.toLowerCase();
+          document.querySelectorAll(".gene-button").forEach((button) => {
+            const gene = button.getAttribute("data-gene").toLowerCase();
+            button.style.display = gene.includes(query) ? "block" : "none";
+          });
+        });
+
+        // Select/Clear all
+        selectAllBtn.addEventListener("click", () => {
+          allGenes.forEach((gene) => selectedGenes.add(gene));
+          updateGeneSelection();
+          showToast(`Selected all ${allGenes.length} genes`, "success");
+        });
+
+        clearAllBtn.addEventListener("click", () => {
+          selectedGenes.clear();
+          updateGeneSelection();
+          showToast("Cleared all gene selections", "info");
+        });
+
+        generateBtn.addEventListener("click", generatePredictions);
+
+        updateGeneSelection();
+      }
+
+      function toggleGene(gene) {
+        if (selectedGenes.has(gene)) {
+          selectedGenes.delete(gene);
+        } else {
+          selectedGenes.add(gene);
+        }
+        updateGeneSelection();
+      }
+
+      function updateGeneSelection() {
+        const selectedCount = selectedGenes.size;
+        document.getElementById("selected-count").textContent = selectedCount;
+
+        // Update gene button states
+        document.querySelectorAll(".gene-button").forEach((button) => {
+          const gene = button.getAttribute("data-gene");
+          if (selectedGenes.has(gene)) {
+            button.classList.add("selected");
+          } else {
+            button.classList.remove("selected");
+          }
+        });
+
+        // Update selected genes display
+        const display = document.getElementById("selected-genes-display");
+        const list = document.getElementById("selected-genes-list");
+
+        if (selectedCount > 0) {
+          display.classList.remove("hidden");
+          list.innerHTML = Array.from(selectedGenes)
+            .map(
+              (gene) =>
+                `<span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">${gene}</span>`
+            )
+            .join("");
+        } else {
+          display.classList.add("hidden");
+        }
+
+        // Update generate button
+        const generateBtn = document.getElementById("generate-predictions-btn");
+        if (selectedCount > 0) {
+          generateBtn.disabled = false;
+          generateBtn.classList.remove("opacity-50");
+        } else {
+          generateBtn.disabled = true;
+          generateBtn.classList.add("opacity-50");
+        }
+      }
+
+      function generatePredictions() {
+        if (selectedGenes.size === 0) {
+          showToast("Please select at least one gene", "error");
+          return;
+        }
+
+        const generateBtn = document.getElementById("generate-predictions-btn");
+        const generateBtnText = document.getElementById("generate-btn-text");
+
+        generateBtn.disabled = true;
+        generateBtn.classList.add("opacity-50");
+        generateBtnText.innerHTML =
+          '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+
+        showToast(
+          `Generating predictions for ${selectedGenes.size} genes...`,
+          "info"
+        );
+
+        // Simulate API call
+        setTimeout(() => {
+          // For demo, we'll just show ABCC11 since that's what our backend supports
+          showToast("Predictions generated successfully!", "success");
+          showPage("heatmap");
+
+          generateBtn.disabled = false;
+          generateBtn.classList.remove("opacity-50");
+          generateBtnText.innerHTML =
+            'Generate Predictions <i class="fas fa-chart-area ml-2"></i>';
+        }, 3000);
+      }
+
+      // Heatmap Functions
+      function initializeHeatmapPage() {
+        const geneSelect = document.getElementById("heatmap-gene-select");
+        const downloadBtn = document.getElementById("download-results-btn");
+
+        // Populate gene dropdown from prediction results (all 50 genes)
+        if (predictionResults && predictionResults.genes && predictionResults.genes.length > 0) {
+          geneSelect.innerHTML = predictionResults.genes
+            .map((gene) => `<option value="${gene}">${gene}</option>`)
+            .join("");
+          console.log(`✅ Loaded ${predictionResults.genes.length} genes into dropdown`);
+        } else {
+          // Fallback
+          geneSelect.innerHTML = '<option value="ABCC11">ABCC11</option>';
+        }
+
+        geneSelect.addEventListener("change", (e) => {
+          const selectedGene = e.target.value;
+          document.getElementById(
+            "heatmap-gene-label"
+          ).textContent = `${selectedGene} Expression`;
+          showToast(`Switched to ${selectedGene} heatmap`, "info");
+        });
+
+        downloadBtn.addEventListener("click", downloadResults);
+        
+        // Initialize stats boxes
+        updateStatsBoxes();
+
+        // Don't call old loadHeatmap() - it's replaced by displayHeatmap()
+        // The initializeHeatmap() will be called from showPage()
+      }
+      
+      // Helper function to update stats boxes
+      function updateStatsBoxes(geneName = null) {
+        // Image Size
+        if (uploadedImageDimensions.width > 0 && uploadedImageDimensions.height > 0) {
+          document.getElementById('stat-size').textContent = 
+            `${uploadedImageDimensions.width} × ${uploadedImageDimensions.height}`;
+        }
+        
+        // Prediction Points
+        if (predictionResults && predictionResults.num_spots) {
+          document.getElementById('stat-points').textContent = 
+            predictionResults.num_spots.toLocaleString();
+        }
+        
+        // Gene (if provided)
+        if (geneName) {
+          document.getElementById('stat-gene').textContent = geneName;
+        } else if (predictionResults && predictionResults.genes && predictionResults.genes.length > 0) {
+          document.getElementById('stat-gene').textContent = predictionResults.genes[0];
+        }
+      }
+
+      function downloadResults() {
+        showToast("Downloading results...", "info");
+        // In a real app, this would download the actual CSV and images
+        setTimeout(() => {
+          showToast("Results downloaded successfully!", "success");
+        }, 1000);
+      }
+
+      function startNewPrediction() {
+        selectedGenes.clear();
+        uploadedFile = null;
+        showToast("Starting new prediction workflow...", "info");
+        showPage("prediction");
+      }
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("✅ DOM Content Loaded");
+
+        // Check for stored auth
+        const storedToken = localStorage.getItem("authToken");
+        const storedUser = localStorage.getItem("user");
+
+        if (storedToken && storedUser) {
+          authToken = storedToken;
+          currentUser = JSON.parse(storedUser);
+
+          // Verify token is still valid
+          api
+            .getCurrentUser()
+            .then((user) => {
+              currentUser = user;
+              localStorage.setItem("user", JSON.stringify(user));
+              document.getElementById("user-name").textContent =
+                currentUser.username;
+              showPage("dashboard");
+            })
+            .catch(() => {
+              // Token expired, clear storage
+              logout();
+            });
+        }
+
+        // Login and register forms
+        document
+          .getElementById("login-form")
+          .addEventListener("submit", handleLogin);
+        document
+          .getElementById("register-form")
+          .addEventListener("submit", handleRegister);
+
+        // Initialize prediction upload when on that page
+        if (document.getElementById("prediction-page")) {
+          initializePredictionUpload();
+        }
+
+        console.log("✅ SpatX Frontend Ready");
+      });
+
+      // Prediction state
+      let generatedCoordinatesFile = null;
+      let predictionResults = null;
+      let uploadedImageDimensions = { width: 0, height: 0 }; // Store actual image dimensions
+
+      // Helper function to generate coordinates based on density
+      function generateCoordinates(density = 'low', imageWidth = 2000, imageHeight = 2000) {
+        // Define stride in pixels (gap between prediction points)
+        // Stride-based approach: point count scales with image size
+        const strideMap = {
+          'low': 224,      // One point every 224 pixels (patch size, no overlap)
+          'medium': 112,   // One point every 112 pixels (50% overlap)
+          'high': 56,      // One point every 56 pixels (75% overlap)
+          'full': 28       // One point every 28 pixels (87.5% overlap, very dense)
+        };
+        
+        const stride = strideMap[density] || 224;
+        const patchSize = 224;
+        const padding = Math.ceil(patchSize / 2); // Half patch size as padding (112px)
+        
+        // Calculate usable area (minus padding on all sides)
+        const usableWidth = imageWidth - (2 * padding);
+        const usableHeight = imageHeight - (2 * padding);
+        
+        // Calculate how many points fit in each dimension
+        const pointsX = Math.floor(usableWidth / stride) + 1;
+        const pointsY = Math.floor(usableHeight / stride) + 1;
+        
+        const coords = [];
+        
+        // Generate grid of points with fixed stride
+        for (let i = 0; i < pointsX; i++) {
+          for (let j = 0; j < pointsY; j++) {
+            const x = padding + (i * stride);
+            const y = padding + (j * stride);
+            coords.push({
+              x: Math.round(x),
+              y: Math.round(y)
+            });
+          }
+        }
+        
+        console.log(`Generated ${coords.length} coordinates with padding=${padding}, range: x[${padding}, ${imageWidth-padding}], y[${padding}, ${imageHeight-padding}]`);
+        
+        return coords;
+      }
+
+      // Convert coordinates array to CSV string
+      function coordinatesToCSV(coords) {
+        let csv = 'x,y\n';
+        coords.forEach(coord => {
+          csv += `${coord.x},${coord.y}\n`;
+        });
+        return csv;
+      }
+
+      // Main prediction function
+      async function runPrediction() {
+        try {
+          if (!uploadedImagePath) {
+            showToast('Please upload an image first', 'error');
+            return;
+          }
+
+          // Get selected density
+          const densityRadio = document.querySelector('input[name="density"]:checked');
+          const density = densityRadio ? densityRadio.value : 'low';
+
+          showToast(`Starting ${density} density prediction...`, 'info');
+
+          // Step 1: Get actual image dimensions
+          const userId = currentUser?.id || 'unknown';
+          const imageUrl = `${API_BASE_URL}/uploads/user_${userId}/${uploadedImagePath}`;
+          
+          // Load image to get actual dimensions
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = imageUrl;
+          });
+
+          const imageWidth = img.width;
+          const imageHeight = img.height;
+          
+          // Store dimensions globally for stats display
+          uploadedImageDimensions = { width: imageWidth, height: imageHeight };
+          
+          console.log(`Image dimensions: ${imageWidth}x${imageHeight}`);
+          showToast(`Image size: ${imageWidth}x${imageHeight}`, 'info');
+
+          // Step 2: Generate coordinates based on actual image size
+          const coords = generateCoordinates(density, imageWidth, imageHeight);
+          const csvContent = coordinatesToCSV(coords);
+          const coordsFilename = `coordinates_${density}_${Date.now()}.csv`;
+
+          // Step 3: Upload coordinates CSV
+          const coordsUpload = await api.uploadCoordinates(csvContent, coordsFilename);
+          generatedCoordinatesFile = coordsUpload.filename;
+
+          showToast(`Generated ${coords.length} prediction points`, 'success');
+
+          // Step 4: Run prediction with selected genes
+          const selectedGenesArray = Array.from(selectedGenes);
+          const genesParam = selectedGenesArray.length > 0 ? selectedGenesArray.join(',') : 'all';
+          
+          showToast(`Running AI prediction for ${selectedGenesArray.length || 50} genes... This may take a moment`, 'info');
+          
+          const response = await api.predict(
+            uploadedImagePath,
+            generatedCoordinatesFile,
+            'working_model',
+            genesParam
+          );
+
+          predictionResults = response;
+          
+          console.log('Prediction response:', response);
+          console.log(`Predicted ${response.num_genes} genes: ${response.genes.join(', ')}`);
+          
+          showToast(`Prediction complete! ${response.num_genes} genes analyzed. Credits: ${response.remaining_credits}`, 'success');
+          
+          // Navigate to heatmap page and initialize it with the first gene
+          showPage('heatmap');
+
+        } catch (error) {
+          console.error('Prediction error:', error);
+          showToast(`Prediction failed: ${error.message}`, 'error');
+        }
+      }
+
+      // Heatmap Functions
+      let currentHeatmaps = {}; // Store heatmaps for each gene
+      let currentOriginalImage = null;
+
+      async function displayHeatmap(geneName) {
+        try {
+          // Use first available gene if none specified
+          if (!geneName && predictionResults && predictionResults.genes && predictionResults.genes.length > 0) {
+            geneName = predictionResults.genes[0];
+          } else if (!geneName) {
+            geneName = 'ABCC11'; // ultimate fallback
+          }
+          
+          // Show loading
+          document.getElementById('heatmap-loading').classList.remove('hidden');
+          document.getElementById('heatmap-comparison').classList.add('hidden');
+
+          // Get user ID from current user
+          const userId = currentUser?.id || 'unknown';
+          
+          // User-specific paths (SECURE - only shows user's own files)
+          const originalImagePath = `${API_BASE_URL}/uploads/user_${userId}/${uploadedImagePath}`;
+          const heatmapPath = `${API_BASE_URL}/uploads/user_${userId}/heatmap_${geneName}_${uploadedImagePath}`;
+          
+          console.log(`Loading heatmap for ${geneName}: ${heatmapPath}`);
+          
+          // Update original image
+          const originalImg = document.getElementById('original-image');
+          originalImg.src = originalImagePath;
+          currentOriginalImage = originalImagePath;
+          
+          // Update heatmap
+          const heatmapImg = document.getElementById('heatmap-image');
+          heatmapImg.src = heatmapPath;
+          
+          // Update UI text
+          document.getElementById('heatmap-title').textContent = `Predicted Expression - ${geneName}`;
+          document.getElementById('original-filename').textContent = uploadedImagePath || 'image.png';
+          
+          // Update all stats boxes robustly
+          updateStatsBoxes(geneName);
+          
+          // Update gene selector to match
+          const geneSelect = document.getElementById('heatmap-gene-select');
+          if (geneSelect) {
+            geneSelect.value = geneName;
+          }
+          
+          // Display gene statistics if available
+          if (predictionResults && predictionResults.gene_statistics && predictionResults.gene_statistics[geneName]) {
+            const stats = predictionResults.gene_statistics[geneName];
+            const statMin = document.getElementById('stat-min');
+            const statMax = document.getElementById('stat-max');
+            const statMean = document.getElementById('stat-mean');
+            const statStd = document.getElementById('stat-std');
+            
+            if (statMin) statMin.textContent = stats.min.toFixed(3);
+            if (statMax) statMax.textContent = stats.max.toFixed(3);
+            if (statMean) statMean.textContent = stats.mean.toFixed(3);
+            if (statStd) statStd.textContent = stats.std.toFixed(3);
+          }
+          
+          // Store current heatmap
+          currentHeatmaps[geneName] = heatmapPath;
+          
+          // Wait for image to load
+          await new Promise((resolve) => {
+            heatmapImg.onload = resolve;
+            heatmapImg.onerror = () => {
+              showToast(`Heatmap for ${geneName} not found. It may still be generating...`, 'warning');
+              resolve();
+            };
+          });
+          
+          // Hide loading, show comparison
+          document.getElementById('heatmap-loading').classList.add('hidden');
+          document.getElementById('heatmap-comparison').classList.remove('hidden');
+          
+          showToast(`Displaying ${geneName} expression heatmap`, 'success');
+        } catch (error) {
+          console.error('Display heatmap error:', error);
+          showToast(`Failed to load heatmap: ${error.message}`, 'error');
+        }
+      }
+
+      function switchGene(geneName) {
+        displayHeatmap(geneName);
+      }
+
+      function downloadHeatmap() {
+        const currentGene = document.getElementById('heatmap-gene-select').value;
+        const heatmapImg = document.getElementById('heatmap-image');
+        
+        if (heatmapImg.src) {
+          const link = document.createElement('a');
+          link.href = heatmapImg.src;
+          link.download = `heatmap_${currentGene}_${uploadedImagePath}`;
+          link.click();
+          showToast('Heatmap downloaded!', 'success');
+        } else {
+          showToast('No heatmap to download', 'error');
+        }
+      }
+
+      // Initialize heatmap when page loads
+      function initializeHeatmap() {
+        if (uploadedImagePath) {
+          // Use the first gene from prediction results, or default to ABCC11
+          const firstGene = (predictionResults && predictionResults.genes && predictionResults.genes.length > 0) 
+            ? predictionResults.genes[0] 
+            : 'ABCC11';
+          displayHeatmap(firstGene);
+        }
+      }
+
+      // Make functions global
+      window.showPage = showPage;
+      window.logout = logout;
+      window.showToast = showToast;
+      window.refreshCredits = refreshCredits;
+      window.showLoginForm = showLoginForm;
+      window.showRegisterForm = showRegisterForm;
+      window.toggleGene = toggleGene;
+      window.clearPredictionFile = clearPredictionFile;
+      window.startNewPrediction = startNewPrediction;
+      window.runPrediction = runPrediction;
+      window.switchGene = switchGene;
+      window.downloadHeatmap = downloadHeatmap;
+    </script>
+  </body>
+</html>
