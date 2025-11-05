@@ -25,14 +25,15 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 
 # Import model components
-from spatx_core.spatx_core.models.cit_to_gene.CiT_Net_T import CIT
-from spatx_core.spatx_core.models.cit_to_gene.CiTGene import CITGenePredictor
-from spatx_core.spatx_core.data_adapters import BreastDataAdapter
-from spatx_core.spatx_core.trainers import SimpleCITTrainer
+from spatx_core.models.cit_to_gene.CiT_Net_T import CIT
+from spatx_core.models.cit_to_gene.CiTGene import CITGenePredictor
+from spatx_core.data_adapters import BreastDataAdapter
+from spatx_core.trainers import SimpleCITTrainer
 
 # Import database and auth
 from database import get_db, User, CreditTransaction
 from models import UserCreate, UserLogin, UserResponse, Token, get_operation_cost
+from gene_metadata import GENE_INFO, GENE_CATEGORIES, get_gene_info, get_gene_category
 
 # Configuration
 UPLOAD_DIR = Path("uploads")
@@ -96,6 +97,10 @@ USER_MODELS_DIR.mkdir(exist_ok=True)
 # Mount static files
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
+# Include training router
+from app_training import router as training_router
+app.include_router(training_router)
+
 # ============================================================================
 # AUTHENTICATION UTILITIES
 # ============================================================================
@@ -148,6 +153,58 @@ def get_current_user(
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    return user
+
+# Alternative auth for endpoints that might have issues with HTTPBearer (like FormData uploads)
+from fastapi import Header
+
+async def get_current_user_optional(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Alternative auth that reads Authorization header directly"""
+    print(f"🔍 DEBUG: Authorization header received: {authorization}")
+    
+    if not authorization:
+        print("❌ DEBUG: No authorization header found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Extract token from "Bearer <token>" format
+    parts = authorization.split()
+    print(f"🔍 DEBUG: Authorization parts: {parts}")
+    
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        print(f"❌ DEBUG: Invalid format - parts count: {len(parts)}, first part: {parts[0] if parts else 'none'}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    token = parts[1]
+    print(f"🔍 DEBUG: Extracted token (first 20 chars): {token[:20]}...")
+    
+    try:
+        username = verify_token(token)
+        print(f"✅ DEBUG: Token verified for user: {username}")
+    except Exception as e:
+        print(f"❌ DEBUG: Token verification failed: {e}")
+        raise
+    
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        print(f"❌ DEBUG: User {username} not found in database")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    print(f"✅ DEBUG: User authenticated: {user.username} (ID: {user.id})")
     return user
 
 def consume_credits(db: Session, user: User, operation: str, description: str = None):
@@ -333,6 +390,17 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user info"""
     return current_user
 
+@app.get("/users/me")
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """Get current user information"""
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "credits": current_user.credits,
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+    }
+
 @app.get("/auth/credits")
 async def get_credits(current_user: User = Depends(get_current_user)):
     """Get user's current credit balance"""
@@ -352,7 +420,7 @@ async def get_credits(current_user: User = Depends(get_current_user)):
 @app.post("/upload/csv")
 async def upload_csv(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Upload CSV file for training or prediction"""
     if not file.filename.endswith('.csv'):
@@ -384,7 +452,7 @@ async def upload_csv(
 @app.post("/upload/image")
 async def upload_image(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Upload histology image (WSI)"""
     allowed_extensions = ['.png', '.jpg', '.jpeg', '.tif', '.tiff']
@@ -573,37 +641,56 @@ async def predict_genes(
             
             gene_values = gene_values_transformed  # Use transformed values
             
-            # Calculate the actual prediction region (excluding padding)
+            # Calculate the actual prediction region (where we have data)
+            PATCH_SIZE = 224
+            HALF_PATCH = PATCH_SIZE // 2
+            
             min_x, max_x = min(x_coords), max(x_coords)
             min_y, max_y = min(y_coords), max(y_coords)
-            pred_width = max_x - min_x
-            pred_height = max_y - min_y
             
-            print(f"  {gene}: Prediction region [{min_x:.0f}-{max_x:.0f}, {min_y:.0f}-{max_y:.0f}]")
+            # Detect the stride (spacing between prediction points)
+            x_sorted = sorted(set(x_coords))
+            y_sorted = sorted(set(y_coords))
             
-            # Create high-resolution grid ONLY for the prediction region
+            stride_x = x_sorted[1] - x_sorted[0] if len(x_sorted) > 1 else PATCH_SIZE
+            stride_y = y_sorted[1] - y_sorted[0] if len(y_sorted) > 1 else PATCH_SIZE
+            
+            # Extend prediction region by HALF the stride (not half patch)
+            # This ensures edge blocks are square, not rectangular
+            pred_min_x = max(0, min_x - stride_x // 2)
+            pred_max_x = min(img_width, max_x + stride_x // 2)
+            pred_min_y = max(0, min_y - stride_y // 2)
+            pred_max_y = min(img_height, max_y + stride_y // 2)
+            
+            pred_width = pred_max_x - pred_min_x
+            pred_height = pred_max_y - pred_min_y
+            
+            print(f"  {gene}: Prediction region [{pred_min_x:.0f}-{pred_max_x:.0f}, {pred_min_y:.0f}-{pred_max_y:.0f}]")
+            print(f"  {gene}: Image size [{img_width} x {img_height}], Prediction coverage: {pred_width}x{pred_height}")
+            
+            # Create high-resolution grid for PREDICTION REGION ONLY
             grid_resolution = 500
-            xi = np.linspace(min_x, max_x, grid_resolution)
-            yi = np.linspace(min_y, max_y, grid_resolution)
+            xi = np.linspace(pred_min_x, pred_max_x, grid_resolution)
+            yi = np.linspace(pred_min_y, pred_max_y, grid_resolution)
             xi, yi = np.meshgrid(xi, yi)
             
-            # Use NEAREST-NEIGHBOR interpolation (NO SMOOTHING - blocky/sharp edges)
-            zi = griddata((x_coords, y_coords), gene_values, (xi, yi), method='nearest', fill_value=np.nan)
+            # Use NEAREST-NEIGHBOR interpolation (no smoothing)
+            zi = griddata((x_coords, y_coords), gene_values, (xi, yi), method='nearest')
             
-            # Create figure with size matching the PREDICTION REGION (not full image)
+            # Create figure matching PREDICTION REGION size (1:1 with overlay)
             dpi = 100
             fig_width_inches = pred_width / dpi
             fig_height_inches = pred_height / dpi
             fig, ax = plt.subplots(figsize=(fig_width_inches, fig_height_inches), dpi=dpi, facecolor='white')
             
-            # Plot heatmap with NEAREST interpolation (sharp, blocky, no smoothing)
-            # Only show the region where we have predictions
-            im = ax.imshow(zi, extent=[min_x, max_x, min_y, max_y],
-                          origin='lower', cmap=cmap, aspect='equal', interpolation='nearest')
+            # Plot heatmap covering PREDICTION REGION
+            # Use origin='upper' to match image coordinate system (top-left origin)
+            im = ax.imshow(zi, extent=[pred_min_x, pred_max_x, pred_max_y, pred_min_y],
+                          origin='upper', cmap=cmap, aspect='equal', interpolation='nearest')
             
-            # Set exact limits to prediction region only
-            ax.set_xlim(min_x, max_x)
-            ax.set_ylim(min_y, max_y)
+            # Set limits to PREDICTION REGION
+            ax.set_xlim(pred_min_x, pred_max_x)
+            ax.set_ylim(pred_max_y, pred_min_y)  # Inverted Y for image coordinates
             
             # Add colorbar on the right (outside the plot)
             from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -637,10 +724,137 @@ async def predict_genes(
             
             heatmap_files.append(heatmap_filename)
             
+            # ========================================================================
+            # GENERATE OVERLAY IMAGE (tissue + semi-transparent heatmap)
+            # ========================================================================
+            
+            # Load the original tissue image and crop to prediction region
+            tissue_img = Image.open(image_path).convert('RGBA')
+            
+            # Crop tissue to SAME prediction region as heatmap (perfect 1:1 match)
+            tissue_cropped = tissue_img.crop((pred_min_x, pred_min_y, pred_max_x, pred_max_y))
+            
+            # Create figure matching PREDICTION REGION size (same as heatmap)
+            fig_overlay, ax_overlay = plt.subplots(figsize=(pred_width/dpi, pred_height/dpi), 
+                                                    dpi=dpi, facecolor='white')
+            
+            # Display the CROPPED tissue image as background
+            # IMPORTANT: Use origin='upper' for PIL images (top-left origin)
+            ax_overlay.imshow(tissue_cropped, extent=[pred_min_x, pred_max_x, pred_max_y, pred_min_y], 
+                             origin='upper', aspect='equal')
+            
+            # Overlay the heatmap with transparency - SAME extent and origin as tissue
+            im_overlay = ax_overlay.imshow(zi, extent=[pred_min_x, pred_max_x, pred_max_y, pred_min_y],
+                                          origin='upper', cmap=cmap, aspect='equal', 
+                                          interpolation='nearest', alpha=0.6)  # 60% opacity, blocky like heatmap
+            
+            # Set limits to PREDICTION REGION (same as heatmap)
+            ax_overlay.set_xlim(pred_min_x, pred_max_x)
+            ax_overlay.set_ylim(pred_max_y, pred_min_y)  # Inverted Y for image coordinates
+            
+            # Add colorbar for overlay (same as heatmap view)
+            divider_overlay = make_axes_locatable(ax_overlay)
+            cax_overlay = divider_overlay.append_axes("right", size="5%", pad=0.1)
+            cbar_overlay = plt.colorbar(im_overlay, cax=cax_overlay)
+            cbar_overlay.ax.tick_params(labelsize=9, colors='#34495E')
+            cbar_overlay.set_label('Log Expression', fontsize=10, color='#34495E')
+            
+            # Remove axes decorations but keep colorbar
+            ax_overlay.set_xticks([])
+            ax_overlay.set_yticks([])
+            for spine in ax_overlay.spines.values():
+                spine.set_visible(False)
+            
+            # Save overlay image without any decorations
+            overlay_filename = f"overlay_{gene}_{image_file}"
+            overlay_path = user_dir / overlay_filename
+            
+            # Save with tight bbox but NO padding to avoid cropping issues
+            plt.savefig(overlay_path, dpi=dpi, bbox_inches='tight', pad_inches=0,
+                       facecolor='white', edgecolor='none', transparent=False)
+            plt.close()
+            
+            heatmap_files.append(overlay_filename)  # Add overlay to file list
+            
+            # ========================================================================
+            # GENERATE CONTOUR PLOT OVERLAY (tissue + smooth contour lines)
+            # ========================================================================
+            
+            # Create smooth grid for contour interpolation (higher resolution for smoother contours)
+            contour_resolution = 300
+            xi_smooth = np.linspace(pred_min_x, pred_max_x, contour_resolution)
+            yi_smooth = np.linspace(pred_min_y, pred_max_y, contour_resolution)
+            xi_smooth, yi_smooth = np.meshgrid(xi_smooth, yi_smooth)
+            
+            # Use CUBIC interpolation first for smooth contours
+            zi_smooth = griddata((x_coords, y_coords), gene_values, (xi_smooth, yi_smooth), method='cubic')
+            
+            # Fill NaN values with nearest neighbor to cover entire region
+            mask = np.isnan(zi_smooth)
+            if np.any(mask):
+                zi_nearest = griddata((x_coords, y_coords), gene_values, (xi_smooth, yi_smooth), method='nearest')
+                zi_smooth[mask] = zi_nearest[mask]
+            
+            # Create figure matching PREDICTION REGION size (same as heatmap/overlay)
+            fig_contour, ax_contour = plt.subplots(figsize=(pred_width/dpi, pred_height/dpi), 
+                                                    dpi=dpi, facecolor='white')
+            
+            # Display the CROPPED tissue image as background
+            # Use origin='upper' to match image coordinate system
+            ax_contour.imshow(tissue_cropped, extent=[pred_min_x, pred_max_x, pred_max_y, pred_min_y], 
+                             origin='upper', aspect='equal', interpolation='bilinear')
+            
+            # Add filled contours with very subtle transparency (30% opacity for better visibility)
+            contour_filled = ax_contour.contourf(xi_smooth, yi_smooth, zi_smooth, 
+                                                 levels=20, cmap=cmap, alpha=0.3, extend='both')
+            
+            # Draw contour lines with WHITE outline + colored fill for maximum visibility
+            # First, draw thick white lines as background/outline
+            contour_white = ax_contour.contour(xi_smooth, yi_smooth, zi_smooth, 
+                                               levels=10, colors='white', linewidths=3.0, 
+                                               alpha=1.0)
+            
+            # Then draw thinner colored lines on top based on expression level
+            contour_colored = ax_contour.contour(xi_smooth, yi_smooth, zi_smooth, 
+                                                 levels=10, cmap=cmap, linewidths=2.0, 
+                                                 alpha=0.95)
+            
+            # Set limits to PREDICTION REGION (inverted Y for image coordinates)
+            ax_contour.set_xlim(pred_min_x, pred_max_x)
+            ax_contour.set_ylim(pred_max_y, pred_min_y)
+            
+            # Add colorbar for contour
+            divider_contour = make_axes_locatable(ax_contour)
+            cax_contour = divider_contour.append_axes("right", size="5%", pad=0.1)
+            cbar_contour = plt.colorbar(contour_filled, cax=cax_contour)
+            cbar_contour.ax.tick_params(labelsize=9, colors='#34495E')
+            cbar_contour.set_label('Log Expression', fontsize=10, color='#34495E')
+            
+            # Remove axes decorations but keep colorbar
+            ax_contour.set_xticks([])
+            ax_contour.set_yticks([])
+            for spine in ax_contour.spines.values():
+                spine.set_visible(False)
+            
+            # Save contour overlay
+            contour_filename = f"contour_{gene}_{image_file}"
+            contour_path = user_dir / contour_filename
+            
+            plt.savefig(contour_path, dpi=dpi, bbox_inches='tight', pad_inches=0,
+                       facecolor='white', edgecolor='none', transparent=False)
+            plt.close()
+            
+            heatmap_files.append(contour_filename)  # Add contour to file list
+            
             if (gene_idx + 1) % 10 == 0:
-                print(f"  Generated {gene_idx + 1}/{len(genes_to_use)} heatmaps...")
+                print(f"  Generated {gene_idx + 1}/{len(genes_to_use)} heatmaps + overlays + contours...")
         
-        print(f"✅ Generated {len(heatmap_files)} heatmaps for selected genes")
+        print(f"✅ Generated {len(heatmap_files)//3} heatmaps + {len(heatmap_files)//3} overlays + {len(heatmap_files)//3} contours for selected genes")
+        
+        # Prepare gene metadata for selected genes
+        gene_metadata = {}
+        for gene in genes_to_use:
+            gene_metadata[gene] = get_gene_info(gene)
         
         response_data = {
             "status": "success",
@@ -652,6 +866,8 @@ async def predict_genes(
             "all_genes": effective_genes,  # All genes that were predicted
             "predictions": results,  # Contains all gene predictions
             "gene_statistics": gene_stats,
+            "gene_metadata": gene_metadata,  # Function, clinical significance, Pearson correlation for each gene
+            "gene_categories": {cat: genes for cat, genes in GENE_CATEGORIES.items()},  # Category groupings
             "model_type": "multi_gene" if actual_gene_count > 1 else "single_gene",
             "heatmap_files": heatmap_files,  # Only heatmaps for selected genes
             "credits_used": get_operation_cost("prediction"),
@@ -681,12 +897,14 @@ if __name__ == "__main__":
     print(f"Available genes: {len(GENE_SET)}")
     print(f"Upload directory: {UPLOAD_DIR}")
     print(f"Models directory: {MODELS_DIR}")
+    print(f"User models directory: {USER_MODELS_DIR}")
     print("🔐 Authentication: ENABLED")
     print("💰 Credits system: ENABLED") 
     print("🛡️  Model protection: ENABLED")
-    print("Server will start on http://localhost:8000")
-    print("API docs available at http://localhost:8000/docs")
+    print("🎓 Training portal: ENABLED")
+    print("Server will start on http://localhost:9001")
+    print("API docs available at http://localhost:9001/docs")
     print("Press Ctrl+C to stop")
     
-    uvicorn.run("app_enhanced:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app_enhanced:app", host="0.0.0.0", port=9001, reload=True)
 

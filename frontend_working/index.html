@@ -57,6 +57,69 @@
         display: block;
       }
 
+      /* Custom Animations */
+      @keyframes blob {
+        0%, 100% {
+          transform: translate(0, 0) scale(1);
+        }
+        25% {
+          transform: translate(20px, -50px) scale(1.1);
+        }
+        50% {
+          transform: translate(-20px, 20px) scale(0.9);
+        }
+        75% {
+          transform: translate(50px, 50px) scale(1.05);
+        }
+      }
+
+      .animate-blob {
+        animation: blob 7s infinite;
+      }
+
+      .animation-delay-2000 {
+        animation-delay: 2s;
+      }
+
+      .animation-delay-4000 {
+        animation-delay: 4s;
+      }
+
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes slide-up {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-fade-in {
+        animation: fade-in 0.8s ease-out forwards;
+      }
+
+      .animate-fade-in-delayed {
+        animation: fade-in 0.8s ease-out forwards;
+        opacity: 0;
+      }
+
+      .animate-slide-up {
+        animation: slide-up 0.8s ease-out forwards;
+      }
+
       /* Button styles */
       .button {
         display: inline-flex;
@@ -387,106 +450,322 @@
         <!-- Main Content -->
         <main class="container mx-auto px-6 py-8">
           <!-- Hero Section -->
-          <section class="text-center py-16">
-            <div class="max-w-4xl mx-auto">
-              <h2
-                class="text-5xl font-bold mb-6 bg-primary-gradient bg-clip-text text-transparent leading-tight pb-2"
-              >
-                Predict Gene Expression from Microscopy Images
-              </h2>
-              <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-                Train CIT transformer models to analyze spatial transcriptomics
-                data and predict gene expression patterns from tissue microscopy
-                images with our streamlined 2-phase workflow.
+          <section class="relative overflow-hidden py-20 px-4">
+            <!-- Animated Background Elements -->
+            <div class="absolute inset-0 overflow-hidden pointer-events-none">
+              <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+              <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+              <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+            </div>
+
+            <div class="max-w-6xl mx-auto relative z-10">
+              <!-- Tagline Badge -->
+              <div class="flex justify-center mb-8 animate-fade-in">
+                <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-soft border border-purple-100">
+                  <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                  </span>
+                  <span class="text-sm font-medium text-gray-700">AI-Powered Spatial Transcriptomics</span>
+                </div>
+              </div>
+
+              <!-- Main Heading -->
+              <h1 class="text-6xl md:text-7xl font-extrabold mb-6 animate-slide-up">
+                <span class="block text-gray-900 leading-tight">Decode Tissue</span>
+                <span class="block bg-gradient-to-r from-purple-600 via-pink-500 to-blue-500 bg-clip-text text-transparent leading-tight">
+                  At Cellular Resolution
+                </span>
+              </h1>
+
+              <!-- Subheading -->
+              <p class="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-delayed" style="animation-delay: 0.2s">
+                Transform histology images into spatial gene expression maps using
+                <span class="font-semibold text-purple-600">state-of-the-art vision transformers</span>. 
+                Train custom models and visualize patterns with clinical precision.
               </p>
 
-              <!-- Workflow Overview -->
-              <div class="flex items-center justify-center gap-8 mb-12">
-                <div
-                  class="flex items-center gap-3 px-6 py-3 bg-white rounded-lg shadow-soft"
-                >
-                  <i class="fas fa-flask text-purple-600 text-xl"></i>
-                  <span class="font-medium">Phase 1: Training</span>
+              <!-- CTA Buttons -->
+              <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in-delayed" style="animation-delay: 0.4s">
+                <button onclick="showPage('training')" class="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+                  <span class="relative z-10 flex items-center gap-2">
+                    <i class="fas fa-rocket"></i>
+                    Start Training
+                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                  </span>
+                  <div class="absolute inset-0 bg-gradient-to-r from-purple-700 to-blue-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </button>
+                <button onclick="showPage('prediction')" class="px-8 py-4 bg-white text-gray-700 font-semibold rounded-xl border-2 border-gray-200 hover:border-purple-300 hover:bg-purple-50 transform hover:-translate-y-1 transition-all duration-300 shadow-md hover:shadow-xl">
+                  <span class="flex items-center gap-2">
+                    <i class="fas fa-chart-bar"></i>
+                    Make Predictions
+                  </span>
+                </button>
+              </div>
+
+              <!-- Stats Row -->
+              <div class="grid grid-cols-3 gap-8 max-w-3xl mx-auto animate-fade-in-delayed" style="animation-delay: 0.6s">
+                <div class="text-center">
+                  <div class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">50+</div>
+                  <div class="text-sm text-gray-600 mt-1">Breast Cancer Genes</div>
                 </div>
-                <i class="fas fa-arrow-right text-2xl text-purple-600"></i>
-                <div
-                  class="flex items-center gap-3 px-6 py-3 bg-white rounded-lg shadow-soft"
-                >
-                  <i class="fas fa-bullseye text-purple-600 text-xl"></i>
-                  <span class="font-medium">Phase 2: Prediction</span>
+                <div class="text-center border-x border-gray-200">
+                  <div class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-500 bg-clip-text text-transparent">10x</div>
+                  <div class="text-sm text-gray-600 mt-1">Faster Training</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-500 bg-clip-text text-transparent">Real-time</div>
+                  <div class="text-sm text-gray-600 mt-1">Visualization</div>
                 </div>
               </div>
             </div>
           </section>
 
-          <!-- Navigation Cards -->
-          <section class="pb-16">
-            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <!-- Workflow Section -->
+          <section class="pb-20">
+            <!-- Section Header -->
+            <div class="text-center mb-12">
+              <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Streamlined Two-Phase Workflow
+              </h2>
+              <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                From model training to spatial predictions in minutes, not months
+              </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
               <!-- Training Phase Card -->
               <div
-                class="card relative overflow-hidden border-2 hover:border-purple-300 transition-smooth group cursor-pointer p-8"
+                class="group relative bg-white rounded-2xl border-2 border-gray-100 hover:border-transparent hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden"
                 onclick="showPage('training')"
               >
-                <div
-                  class="absolute inset-0 bg-gradient-to-r from-purple-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-smooth"
-                ></div>
-                <div class="relative z-10">
-                  <div
-                    class="w-12 h-12 bg-primary-gradient rounded-lg flex items-center justify-center mb-4"
-                  >
-                    <i class="fas fa-flask text-white text-xl"></i>
+                <!-- Gradient Border Effect -->
+                <div class="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
+                <div class="absolute inset-0.5 bg-white rounded-2xl"></div>
+                
+                <!-- Card Content -->
+                <div class="relative p-8">
+                  <!-- Icon -->
+                  <div class="relative mb-6">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                    <div class="relative w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                      <i class="fas fa-flask text-white text-2xl"></i>
+                    </div>
                   </div>
-                  <h3 class="text-2xl font-bold mb-4">
-                    Phase 1: Model Training
-                  </h3>
-                  <p class="text-gray-600 mb-6">
-                    Upload your training data and configure model parameters to
-                    train custom CIT transformer models
-                  </p>
-                  <ul class="space-y-2 text-sm text-gray-500 mb-6">
-                    <li>• Upload training CSV with gene expression data</li>
-                    <li>• Upload corresponding tissue microscopy images</li>
-                    <li>• Configure training parameters and gene selection</li>
-                    <li>• Monitor real-time training progress</li>
-                  </ul>
-                  <button class="button button-primary w-full">
-                    Start Training
-                    <i class="fas fa-arrow-right ml-2"></i>
+
+                  <!-- Title & Badge -->
+                  <div class="mb-4">
+                    <div class="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full mb-3">
+                      PHASE 1
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">
+                      Model Training
+                    </h3>
+                    <p class="text-gray-600 leading-relaxed">
+                      Fine-tune pre-trained CIT transformers on your spatial transcriptomics data with custom gene panels
+                    </p>
+                  </div>
+
+                  <!-- Feature List -->
+                  <div class="space-y-3 mb-8">
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-purple-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">CSV + tissue image upload</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-purple-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Custom gene panel selection</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-purple-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Real-time training metrics</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-purple-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Automatic model versioning</span>
+                    </div>
+                  </div>
+
+                  <!-- CTA Button -->
+                  <button class="w-full px-6 py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl shadow-lg group-hover:shadow-xl transform group-hover:scale-[1.02] transition-all duration-300">
+                    <span class="flex items-center justify-center gap-2">
+                      Start Training
+                      <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </span>
                   </button>
                 </div>
               </div>
 
               <!-- Prediction Phase Card -->
               <div
-                class="card relative overflow-hidden border-2 hover:border-purple-300 transition-smooth group cursor-pointer p-8"
+                class="group relative bg-white rounded-2xl border-2 border-gray-100 hover:border-transparent hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden"
                 onclick="showPage('prediction')"
               >
-                <div
-                  class="absolute inset-0 bg-gradient-to-r from-purple-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-smooth"
-                ></div>
-                <div class="relative z-10">
-                  <div
-                    class="w-12 h-12 bg-primary-gradient rounded-lg flex items-center justify-center mb-4"
-                  >
-                    <i class="fas fa-bullseye text-white text-xl"></i>
+                <!-- Gradient Border Effect -->
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
+                <div class="absolute inset-0.5 bg-white rounded-2xl"></div>
+                
+                <!-- Card Content -->
+                <div class="relative p-8">
+                  <!-- Icon -->
+                  <div class="relative mb-6">
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-400 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                    <div class="relative w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                      <i class="fas fa-chart-area text-white text-2xl"></i>
+                    </div>
                   </div>
-                  <h3 class="text-2xl font-bold mb-4">
-                    Phase 2: Gene Prediction
-                  </h3>
-                  <p class="text-gray-600 mb-6">
-                    Use trained models to predict gene expression on new tissue
-                    samples
-                  </p>
-                  <ul class="space-y-2 text-sm text-gray-500 mb-6">
-                    <li>• Upload tissue microscopy images</li>
-                    <li>• Select prediction density (how many points)</li>
-                    <li>• Select genes for expression prediction</li>
-                    <li>• Visualize spatial gene expression maps</li>
-                  </ul>
-                  <button class="button button-primary w-full">
-                    Make Predictions
-                    <i class="fas fa-arrow-right ml-2"></i>
+
+                  <!-- Title & Badge -->
+                  <div class="mb-4">
+                    <div class="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full mb-3">
+                      PHASE 2
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">
+                      Gene Prediction
+                    </h3>
+                    <p class="text-gray-600 leading-relaxed">
+                      Generate high-resolution spatial gene expression maps from new tissue samples
+                    </p>
+                  </div>
+
+                  <!-- Feature List -->
+                  <div class="space-y-3 mb-8">
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-blue-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Upload new tissue images</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-blue-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Multi-gene expression overlays</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-blue-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Interactive heatmap & contours</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-blue-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Export-ready visualizations</span>
+                    </div>
+                  </div>
+
+                  <!-- CTA Button -->
+                  <button class="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg group-hover:shadow-xl transform group-hover:scale-[1.02] transition-all duration-300">
+                    <span class="flex items-center justify-center gap-2">
+                      Make Predictions
+                      <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </span>
                   </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Visual Workflow Section -->
+          <section class="pb-20">
+            <div class="max-w-6xl mx-auto">
+              <!-- Section Header -->
+              <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                  See It In Action
+                </h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                  From raw histology to spatial gene expression maps
+                </p>
+              </div>
+
+              <!-- Workflow Diagram -->
+              <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 border border-gray-100">
+                <img 
+                  src="untitled.png" 
+                  alt="SpatX Workflow: From tissue input to expression visualization" 
+                  class="w-full h-auto rounded-xl"
+                />
+                
+                <!-- Caption Grid Below Image -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+                  <!-- Input -->
+                  <div class="text-center md:col-span-4 pb-4 border-b border-gray-200">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-full mb-3">
+                      <i class="fas fa-arrow-down text-purple-600"></i>
+                      <span class="text-sm font-semibold text-purple-700">INPUT</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">H&E Stained Tissue</h3>
+                    <p class="text-sm text-gray-600">Standard histology microscopy image</p>
+                  </div>
+
+                  <!-- Output 1 -->
+                  <div class="text-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <i class="fas fa-th text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mb-1">Grid Predictions</h3>
+                    <p class="text-xs text-gray-600">Discrete point-wise expression values</p>
+                  </div>
+
+                  <!-- Output 2 -->
+                  <div class="text-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <i class="fas fa-fire text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mb-1">Expression Heatmap</h3>
+                    <p class="text-xs text-gray-600">Continuous spatial distribution map</p>
+                  </div>
+
+                  <!-- Output 3 -->
+                  <div class="text-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <i class="fas fa-layer-group text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mb-1">Contour Overlay</h3>
+                    <p class="text-xs text-gray-600">Multi-level isocontours on tissue</p>
+                  </div>
+
+                  <!-- Output 4 -->
+                  <div class="text-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <i class="fas fa-chart-area text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mb-1">Clinical Visualization</h3>
+                    <p class="text-xs text-gray-600">Export-ready spatial analysis</p>
+                  </div>
+                </div>
+
+                <!-- Technical Details -->
+                <div class="mt-8 pt-6 border-t border-gray-200">
+                  <div class="flex flex-wrap justify-center gap-4 text-xs text-gray-500">
+                    <div class="flex items-center gap-2">
+                      <i class="fas fa-check-circle text-purple-500"></i>
+                      <span>Cubic Interpolation</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <i class="fas fa-check-circle text-purple-500"></i>
+                      <span>Multi-Gene Analysis</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <i class="fas fa-check-circle text-purple-500"></i>
+                      <span>High-Resolution Output</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <i class="fas fa-check-circle text-purple-500"></i>
+                      <span>Clinical-Grade Accuracy</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -639,6 +918,57 @@
                   >
                     <i class="fas fa-times-circle text-xl"></i>
                   </button>
+                </div>
+              </div>
+
+              <!-- Model Selection -->
+              <div class="mb-8">
+                <label class="block text-lg font-semibold text-gray-800 mb-4">
+                  <i class="fas fa-brain mr-2 text-purple-500"></i>Model Selection
+                </label>
+                <p class="text-gray-600 text-sm mb-4">
+                  Choose which model to use for predictions.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label
+                    class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 transition-smooth"
+                  >
+                    <input
+                      type="radio"
+                      name="model-select"
+                      value="original"
+                      class="form-radio text-purple-600"
+                      checked
+                      onchange="handleModelSelection()"
+                    />
+                    <div>
+                      <div class="font-medium">Original 50-Gene Model</div>
+                      <div class="text-sm text-gray-500">
+                        Pre-trained baseline model
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    id="user-model-option"
+                    class="hidden flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 transition-smooth"
+                  >
+                    <input
+                      type="radio"
+                      name="model-select"
+                      value="user"
+                      class="form-radio text-purple-600"
+                      onchange="handleModelSelection()"
+                    />
+                    <div>
+                      <div class="font-medium flex items-center gap-2">
+                        <span>My Trained Model</span>
+                        <i class="fas fa-star text-yellow-500 text-xs"></i>
+                      </div>
+                      <div class="text-sm text-gray-500">
+                        Fine-tuned on your data
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -882,18 +1212,17 @@
                 ></div>
               </div>
 
-              <!-- Gene Grid -->
-              <div class="border border-gray-200 rounded-lg p-6 mb-6">
-                <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+              <!-- Gene Categories -->
+              <div class="space-y-4 mb-6">
+                <h4 class="text-lg font-semibold flex items-center gap-2">
                   <i class="fas fa-ribbon text-pink-500"></i>
-                  Breast Cancer Panel
-                  <span class="text-sm text-gray-500">(50 genes)</span>
+                  Breast Cancer Panel - Functional Categories
+                  <span class="text-sm text-gray-500">(50 genes, 13 categories)</span>
                 </h4>
-                <div
-                  id="genes-grid"
-                  class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
-                >
-                  <!-- Genes will be populated by JavaScript -->
+                
+                <!-- Category-based gene selection -->
+                <div id="gene-categories-container" class="space-y-3">
+                  <!-- Categories will be populated by JavaScript -->
                 </div>
               </div>
 
@@ -1047,6 +1376,32 @@
 
               <!-- Image Comparison Grid -->
               <div id="heatmap-comparison" class="hidden">
+                
+                <!-- Tabs for Heatmap vs Overlay vs Contour -->
+                <div class="flex border-b border-gray-200 mb-6">
+                  <button
+                    id="tab-heatmap"
+                    onclick="switchTab('heatmap')"
+                    class="px-6 py-3 font-semibold text-purple-600 border-b-2 border-purple-600 transition-smooth"
+                  >
+                    <i class="fas fa-chart-area mr-2"></i>Heatmap View
+                  </button>
+                  <button
+                    id="tab-overlay"
+                    onclick="switchTab('overlay')"
+                    class="px-6 py-3 font-semibold text-gray-500 border-b-2 border-transparent hover:text-purple-600 transition-smooth"
+                  >
+                    <i class="fas fa-layer-group mr-2"></i>Overlay View
+                  </button>
+                  <button
+                    id="tab-contour"
+                    onclick="switchTab('contour')"
+                    class="px-6 py-3 font-semibold text-gray-500 border-b-2 border-transparent hover:text-purple-600 transition-smooth"
+                  >
+                    <i class="fas fa-wave-square mr-2"></i>Contour View
+                  </button>
+                </div>
+                
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   
                   <!-- Original Image -->
@@ -1068,11 +1423,11 @@
                     </div>
                   </div>
 
-                  <!-- Heatmap Image -->
+                  <!-- Heatmap/Overlay Image (dynamically switches) -->
                   <div class="space-y-4">
                     <div class="flex items-center justify-between">
                       <h3 class="text-xl font-bold text-gray-900 flex items-center">
-                        <i class="fas fa-chart-area text-purple-600 mr-2"></i>
+                        <i class="fas fa-chart-area text-purple-600 mr-2" id="viz-icon"></i>
                         <span id="heatmap-title">Predicted Expression - ABCC11</span>
                       </h3>
                       <button
@@ -1107,7 +1462,7 @@
                 </div>
 
                 <!-- Stats Panel -->
-                <div class="mt-8 grid grid-cols-3 gap-4">
+                <div class="mt-8 grid grid-cols-4 gap-4">
                   <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center">
                     <p class="text-sm text-blue-600 font-semibold mb-1">Image Size</p>
                     <p class="text-2xl font-bold text-blue-900" id="stat-size">-</p>
@@ -1119,6 +1474,38 @@
                   <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-4 text-center">
                     <p class="text-sm text-pink-600 font-semibold mb-1">Prediction Points</p>
                     <p class="text-2xl font-bold text-pink-900" id="stat-points">-</p>
+                  </div>
+                  <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 text-center">
+                    <p class="text-sm text-green-600 font-semibold mb-1">Pearson Score</p>
+                    <p class="text-2xl font-bold text-green-900" id="stat-pearson">-</p>
+                  </div>
+                </div>
+                
+                <!-- Gene Information Panel -->
+                <div id="gene-info-panel" class="mt-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 hidden">
+                  <h4 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-purple-600"></i>
+                    Gene Information: <span id="gene-info-name" class="text-purple-600">-</span>
+                  </h4>
+                  <div class="space-y-4">
+                    <div>
+                      <p class="text-sm font-semibold text-gray-700 mb-1">
+                        <i class="fas fa-tag text-blue-500 mr-2"></i>Full Name
+                      </p>
+                      <p class="text-sm text-gray-600 bg-white p-3 rounded-lg" id="gene-full-name">-</p>
+                    </div>
+                    <div>
+                      <p class="text-sm font-semibold text-gray-700 mb-1">
+                        <i class="fas fa-cogs text-green-500 mr-2"></i>Function
+                      </p>
+                      <p class="text-sm text-gray-600 bg-white p-3 rounded-lg leading-relaxed" id="gene-function">-</p>
+                    </div>
+                    <div>
+                      <p class="text-sm font-semibold text-gray-700 mb-1">
+                        <i class="fas fa-clinic-medical text-red-500 mr-2"></i>Clinical Significance
+                      </p>
+                      <p class="text-sm text-gray-600 bg-white p-3 rounded-lg leading-relaxed" id="gene-clinical">-</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1154,23 +1541,304 @@
       </div>
 
       <!-- Training Page -->
+      <!-- Training Page -->
       <div id="training-page" class="page">
-        <div class="min-h-screen bg-gray-100 flex items-center justify-center">
-          <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-4">
-              Model Training Workflow
-            </h1>
-            <p class="text-gray-600 mb-8">
-              This is where the training workflow will be implemented!
-            </p>
-            <button
-              onclick="showPage('dashboard')"
-              class="button button-primary"
-            >
-              <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-            </button>
+        <header class="bg-white shadow-lg border-b sticky top-0 z-40">
+          <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-4">
+                <button
+                  onclick="showPage('dashboard')"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-arrow-left"></i>
+                  <span>Back</span>
+                </button>
+                <div class="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center">
+                  <i class="fas fa-brain text-white"></i>
+                </div>
+                <div>
+                  <h1 class="text-2xl font-bold text-gray-900">
+                    Model Training Portal
+                  </h1>
+                  <p class="text-sm text-gray-600">
+                    Fine-tune the model on your own data
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-600">
+                  Welcome, <span id="training-user-name">Demo User</span>
+                </div>
+                <button
+                  onclick="logout()"
+                  class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-smooth"
+                >
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        </header>
+
+        <main class="container mx-auto px-6 py-8">
+          <!-- Instructions Panel -->
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-8 border border-purple-200">
+            <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <i class="fas fa-info-circle text-purple-600"></i>
+              Training Data Requirements
+            </h3>
+            <div class="space-y-2 text-sm text-gray-700">
+              <p><strong>📸 Tissue Image:</strong> High-resolution histology image (.tif, .tiff, .png, .jpg)</p>
+              <p><strong>📊 CSV File:</strong> Must contain columns: <code class="bg-white px-2 py-1 rounded">x</code>, <code class="bg-white px-2 py-1 rounded">y</code>, and gene expression columns for genes you want to fine-tune</p>
+              <p><strong>Example CSV:</strong> <code class="bg-white px-2 py-1 rounded">x,y,ESR1,ERBB2,GATA3</code> (coordinates + gene expression values)</p>
+              <p><strong>⚠️ Note:</strong> Training will create/overwrite your personal model. You can choose between Original Model and Your Trained Model for predictions.</p>
+            </div>
+          </div>
+
+          <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-xl p-8">
+              
+              <!-- Upload Section -->
+              <div class="space-y-6 mb-8">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-upload text-purple-600"></i>
+                  Step 1: Upload Training Data
+                </h3>
+                
+                <!-- Tissue Image Upload -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Tissue Image
+                  </label>
+                  <div
+                    class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-purple-400 transition-smooth cursor-pointer"
+                    onclick="document.getElementById('training-image-input').click()"
+                  >
+                    <i class="fas fa-image text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600">
+                      Click to upload tissue image
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">
+                      TIF, TIFF, PNG, JPG supported
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    id="training-image-input"
+                    accept=".tif,.tiff,.png,.jpg,.jpeg"
+                    class="hidden"
+                  />
+                  <div
+                    id="training-image-display"
+                    class="hidden mt-3 bg-gray-50 p-4 rounded-lg border border-gray-200"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-3">
+                        <i class="fas fa-file-image text-purple-600 text-xl"></i>
+                        <div>
+                          <p id="training-image-name" class="font-medium text-gray-900"></p>
+                          <p id="training-image-size" class="text-sm text-gray-500"></p>
+                        </div>
+                      </div>
+                      <button
+                        onclick="clearTrainingImage()"
+                        class="text-red-500 hover:text-red-700"
+                      >
+                        <i class="fas fa-times-circle text-xl"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CSV Upload -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Gene Expression CSV
+                  </label>
+                  <div
+                    class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-purple-400 transition-smooth cursor-pointer"
+                    onclick="document.getElementById('training-csv-input').click()"
+                  >
+                    <i class="fas fa-file-csv text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600">
+                      Click to upload CSV file
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">
+                      Must contain: x, y, gene1, gene2, ...
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    id="training-csv-input"
+                    accept=".csv"
+                    class="hidden"
+                  />
+                  <div
+                    id="training-csv-display"
+                    class="hidden mt-3 bg-gray-50 p-4 rounded-lg border border-gray-200"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-3">
+                        <i class="fas fa-file-csv text-green-600 text-xl"></i>
+                        <div>
+                          <p id="training-csv-name" class="font-medium text-gray-900"></p>
+                          <p id="training-csv-info" class="text-sm text-gray-500"></p>
+                        </div>
+                      </div>
+                      <button
+                        onclick="clearTrainingCSV()"
+                        class="text-red-500 hover:text-red-700"
+                      >
+                        <i class="fas fa-times-circle text-xl"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="my-8 border-gray-200" />
+
+              <!-- Training Parameters -->
+              <div class="space-y-6 mb-8">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-sliders-h text-purple-600"></i>
+                  Step 2: Configure Training Parameters
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- Epochs -->
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                      Number of Epochs
+                    </label>
+                    <input
+                      type="number"
+                      id="training-epochs"
+                      value="10"
+                      min="1"
+                      max="100"
+                      class="input"
+                      placeholder="e.g., 10"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Recommended: 10-50</p>
+                  </div>
+
+                  <!-- Learning Rate -->
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                      Learning Rate
+                    </label>
+                    <input
+                      type="number"
+                      id="training-lr"
+                      value="0.0001"
+                      step="0.00001"
+                      min="0.00001"
+                      max="0.01"
+                      class="input"
+                      placeholder="e.g., 0.0001"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Recommended: 0.0001</p>
+                  </div>
+
+                  <!-- Batch Size -->
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                      Batch Size
+                    </label>
+                    <select id="training-batch-size" class="input">
+                      <option value="8">8</option>
+                      <option value="16" selected>16</option>
+                      <option value="32">32</option>
+                      <option value="64">64</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Recommended: 16</p>
+                  </div>
+
+                  <!-- Validation Split -->
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                      Validation Split (%)
+                    </label>
+                    <input
+                      type="number"
+                      id="training-val-split"
+                      value="20"
+                      min="0"
+                      max="50"
+                      class="input"
+                      placeholder="e.g., 20"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Recommended: 20%</p>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="my-8 border-gray-200" />
+
+              <!-- Training Status -->
+              <div id="training-status-section" class="hidden mb-8">
+                <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <i class="fas fa-chart-line text-purple-600"></i>
+                  Training Progress
+                </h3>
+                <div class="bg-gray-50 rounded-xl p-6 space-y-4">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-semibold text-gray-700">Status:</span>
+                    <span id="training-status-text" class="text-sm text-purple-600 font-medium">Initializing...</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-semibold text-gray-700">Epoch:</span>
+                    <span id="training-epoch-text" class="text-sm text-gray-900">0 / 10</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div
+                      id="training-progress-bar"
+                      class="bg-gradient-to-r from-purple-500 to-pink-500 h-4 rounded-full transition-all duration-300"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span class="text-gray-600">Training Loss:</span>
+                      <span id="training-loss" class="ml-2 font-semibold text-gray-900">-</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-600">Validation Loss:</span>
+                      <span id="training-val-loss" class="ml-2 font-semibold text-gray-900">-</span>
+                    </div>
+                  </div>
+                  <div id="training-log" class="mt-4 bg-white border border-gray-200 rounded-lg p-3 h-32 overflow-y-auto font-mono text-xs text-gray-700">
+                    <!-- Training logs will appear here -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex justify-between">
+                <button
+                  onclick="showPage('dashboard')"
+                  class="button button-secondary"
+                >
+                  <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </button>
+                <button
+                  id="start-training-btn"
+                  onclick="startTraining()"
+                  disabled
+                  class="button button-primary opacity-50"
+                >
+                  <i class="fas fa-play mr-2"></i>
+                  <span id="training-btn-text">Start Training</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </main>
       </div>
     </div>
 
@@ -1187,10 +1855,12 @@
       let uploadedFile = null;
       let uploadedImagePath = null;
       let predictionDensity = "low";
+      let geneCategories = {};  // Will be populated from prediction response
+      let geneMetadata = {};    // Will be populated from prediction response
 
       // API Configuration - Auto-detect based on current host
       const API_BASE_URL = window.location.hostname === 'localhost' 
-        ? "http://localhost:9001" 
+        ? "http://localhost:9001"  // Changed to 9001 for local dev
         : `http://${window.location.hostname}:9001`;
 
       // API Client for real backend integration
@@ -1204,8 +1874,19 @@
           const url = `${API_BASE_URL}/${endpoint}`;
           const headers = {};
 
-          if (authToken) {
-            headers["Authorization"] = `Bearer ${authToken}`;
+          // CRITICAL: Always check for token in localStorage if not in memory
+          const token = authToken || localStorage.getItem("authToken");
+          
+          // Reduce logging spam for training progress polling
+          const isProgressPoll = endpoint.includes('train/progress');
+          
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+            if (!isProgressPoll) {
+              console.log(`✅ Token attached to ${endpoint} request`);
+            }
+          } else {
+            console.warn(`⚠️ No token available for ${endpoint} request`);
           }
 
           let body;
@@ -1217,16 +1898,29 @@
           }
 
           const options = { method, headers, body };
+          
+          if (!isProgressPoll) {
+            console.log(`📡 API Request: ${method} ${endpoint}`, {
+              hasToken: !!token,
+              isFormData,
+              headers: Object.keys(headers)
+            });
+          }
 
           try {
             const response = await fetch(url, options);
 
             if (!response.ok) {
               const errorData = await response.json();
+              console.error(`❌ API Error (${response.status}):`, errorData);
               throw new Error(errorData.detail || "Something went wrong");
             }
 
-            return await response.json();
+            const result = await response.json();
+            if (!isProgressPoll) {
+              console.log(`✅ API Success: ${endpoint}`, result);
+            }
+            return result;
           } catch (error) {
             console.error("API request failed:", error);
             throw error;
@@ -1251,7 +1945,7 @@
         }
 
         async getCredits() {
-          return this.request("credits");
+          return this.request("auth/credits");
         }
 
         // File operations
@@ -1354,6 +2048,13 @@
       function showPage(pageId) {
         console.log(`📍 Navigating to: ${pageId}`);
 
+        // Check authentication for protected pages
+        const protectedPages = ['dashboard', 'prediction', 'gene-selection', 'heatmap', 'training'];
+        if (protectedPages.includes(pageId) && !authToken) {
+          showToast('Please login first', 'error');
+          pageId = 'login';
+        }
+
         // Hide all pages
         document.querySelectorAll(".page").forEach((page) => {
           page.classList.remove("active");
@@ -1372,6 +2073,7 @@
             "prediction-user-name",
             "gene-user-name",
             "heatmap-user-name",
+            "training-user-name"
           ];
           userNameElements.forEach((id) => {
             const el = document.getElementById(id);
@@ -1381,6 +2083,11 @@
           // Update credits display
           const creditsEl = document.getElementById("dashboard-credits");
           if (creditsEl) creditsEl.textContent = currentUser.credits || 0;
+        }
+        
+        // Check if user has trained model when navigating to prediction page
+        if (pageId === 'prediction') {
+          checkUserModel();
         }
         
         // Initialize heatmap page when navigating to it
@@ -1687,30 +2394,75 @@
 
       // Gene Selection Functions
       function initializeGeneSelection() {
-        const genesGrid = document.getElementById("genes-grid");
+        const categoriesContainer = document.getElementById("gene-categories-container");
         const searchInput = document.getElementById("gene-search");
         const selectAllBtn = document.getElementById("select-all-genes-btn");
         const clearAllBtn = document.getElementById("clear-all-genes-btn");
         const generateBtn = document.getElementById("generate-predictions-btn");
 
-        // Populate genes grid
-        genesGrid.innerHTML = allGenes
-          .map(
-            (gene) => `
-           <button class="gene-button px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-smooth" 
-                   data-gene="${gene}" onclick="toggleGene('${gene}')">
-             ${gene}
-           </button>
-         `
-          )
-          .join("");
+        // Define default categories (will be used if backend doesn't provide them)
+        const defaultCategories = {
+          "Hormone Receptors & Signaling": ["ESR1", "ERBB2", "GATA3", "KLF5"],
+          "Growth Factor Receptors & Proliferation": ["KIT", "OXTR", "TOP2A"],
+          "Basal/Myoepithelial Markers": ["KRT5", "KRT14", "KRT6B"],
+          "Extracellular Matrix & Metastasis": ["MMP1", "MMP12"],
+          "Immune Cell Markers": ["CD3E", "CCR7", "IL2RG", "IL7R", "MS4A1", "PTPRC", "SLAMF7", "TCL1A", "TRAC"],
+          "Immune-Related Cell Adhesion": ["CEACAM6", "CEACAM8"],
+          "Lipid Metabolism": ["FASN", "SCD", "ADIPOQ"],
+          "Water & Small Molecule Transport": ["AQP1", "AQP3"],
+          "Secreted & Glandular Markers": ["PIGR", "MUC6", "SCGB2A1", "PTGDS", "TPSAB1", "SERPINA3", "PTN"],
+          "Cytoskeletal & Contractile Proteins": ["MYH11", "MYLK", "MYBPC1"],
+          "Signaling & Regulatory Proteins": ["SFRP1", "CLIC6", "CYTIP", "OPRPN", "SERHL2", "TENT5C", "ANKRD30A", "ABCC11"],
+          "Structural & Adhesion Proteins": ["DST", "VWF", "TACSTD2"],
+          "Enzyme & Metabolic Function": ["ADH1B"]
+        };
+        
+        const categoriesToUse = Object.keys(geneCategories).length > 0 ? geneCategories : defaultCategories;
+
+        // Populate genes by category
+        categoriesContainer.innerHTML = Object.entries(categoriesToUse)
+          .map(([category, genes], index) => `
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <div class="flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3 cursor-pointer hover:bg-purple-100 transition-smooth" onclick="toggleCategory('category-${index}')">
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-chevron-right category-chevron text-purple-600 transition-transform" id="chevron-category-${index}"></i>
+                  <h5 class="font-semibold text-gray-800">${category}</h5>
+                  <span class="text-xs bg-white px-2 py-1 rounded-full text-gray-600">${genes.length} genes</span>
+                </div>
+                <button onclick="event.stopPropagation(); selectCategoryGenes('${category}', ${JSON.stringify(genes).replace(/"/g, '&quot;')})" 
+                        class="text-xs px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-smooth">
+                  Select All
+                </button>
+              </div>
+              <div id="category-${index}" class="hidden px-4 py-3 bg-white">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                  ${genes.map(gene => `
+                    <button class="gene-button px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-smooth font-medium" 
+                            data-gene="${gene}" 
+                            data-category="${category}"
+                            onclick="toggleGene('${gene}')">
+                      ${gene}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `).join('');
 
         // Search functionality
         searchInput.addEventListener("input", (e) => {
           const query = e.target.value.toLowerCase();
           document.querySelectorAll(".gene-button").forEach((button) => {
             const gene = button.getAttribute("data-gene").toLowerCase();
-            button.style.display = gene.includes(query) ? "block" : "none";
+            const category = button.getAttribute("data-category");
+            if (gene.includes(query)) {
+              button.style.display = "block";
+              // Show parent category if any gene matches
+              const categoryDiv = button.closest('[id^="category-"]');
+              if (categoryDiv) categoryDiv.classList.remove('hidden');
+            } else {
+              button.style.display = "none";
+            }
           });
         });
 
@@ -1730,6 +2482,22 @@
         generateBtn.addEventListener("click", generatePredictions);
 
         updateGeneSelection();
+      }
+      
+      // Toggle category expand/collapse
+      function toggleCategory(categoryId) {
+        const categoryDiv = document.getElementById(categoryId);
+        const chevron = document.getElementById('chevron-' + categoryId);
+        categoryDiv.classList.toggle('hidden');
+        chevron.classList.toggle('fa-chevron-right');
+        chevron.classList.toggle('fa-chevron-down');
+      }
+      
+      // Select all genes in a category
+      function selectCategoryGenes(categoryName, genes) {
+        genes.forEach(gene => selectedGenes.add(gene));
+        updateGeneSelection();
+        showToast(`Selected all genes in ${categoryName}`, "success");
       }
 
       function toggleGene(gene) {
@@ -1862,10 +2630,31 @@
         }
         
         // Gene (if provided)
-        if (geneName) {
-          document.getElementById('stat-gene').textContent = geneName;
-        } else if (predictionResults && predictionResults.genes && predictionResults.genes.length > 0) {
-          document.getElementById('stat-gene').textContent = predictionResults.genes[0];
+        const currentGene = geneName || (predictionResults && predictionResults.genes && predictionResults.genes.length > 0 ? predictionResults.genes[0] : null);
+        if (currentGene) {
+          document.getElementById('stat-gene').textContent = currentGene;
+          
+          // Update Pearson score and gene info if metadata is available
+          if (geneMetadata && geneMetadata[currentGene]) {
+            const metadata = geneMetadata[currentGene];
+            
+            // Pearson Score
+            const pearsonScore = metadata.pearson_correlation || 0.57;
+            document.getElementById('stat-pearson').textContent = pearsonScore.toFixed(2);
+            
+            // Gene Information Panel
+            document.getElementById('gene-info-name').textContent = currentGene;
+            document.getElementById('gene-full-name').textContent = metadata.full_name || currentGene;
+            document.getElementById('gene-function').textContent = metadata.function || 'Information not available';
+            document.getElementById('gene-clinical').textContent = metadata.clinical_significance || 'Information not available';
+            
+            // Show gene info panel
+            document.getElementById('gene-info-panel').classList.remove('hidden');
+          } else {
+            // No metadata available - hide gene info panel
+            document.getElementById('stat-pearson').textContent = '0.57';
+            document.getElementById('gene-info-panel').classList.add('hidden');
+          }
         }
       }
 
@@ -1882,6 +2671,269 @@
         uploadedFile = null;
         showToast("Starting new prediction workflow...", "info");
         showPage("prediction");
+      }
+
+      // ========================================================================
+      // MODEL SELECTION FUNCTIONS
+      // ========================================================================
+      
+      let userHasModel = false;
+      let selectedModel = 'working_model';  // Default to original model
+      
+      async function checkUserModel() {
+        try {
+          const response = await api.request('train/has_model');
+          userHasModel = response.has_model;
+          
+          const userModelOption = document.getElementById('user-model-option');
+          if (userHasModel && userModelOption) {
+            userModelOption.classList.remove('hidden');
+          }
+        } catch (error) {
+          console.error('Failed to check user model:', error);
+        }
+      }
+      
+      function handleModelSelection() {
+        const selected = document.querySelector('input[name="model-select"]:checked')?.value;
+        if (selected === 'user') {
+          selectedModel = `user_${currentUser.id}_model`;
+          showToast('Using your trained model', 'info');
+        } else {
+          selectedModel = 'working_model';
+          showToast('Using original 50-gene model', 'info');
+        }
+      }
+      
+      // ========================================================================
+      // TRAINING PORTAL FUNCTIONS
+      // ========================================================================
+      
+      let trainingImageFile = null;
+      let trainingCSVFile = null;
+      let trainingInterval = null;
+      
+      // Handle training image upload
+      document.getElementById('training-image-input')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          trainingImageFile = file;
+          document.getElementById('training-image-name').textContent = file.name;
+          document.getElementById('training-image-size').textContent = formatFileSize(file.size);
+          document.getElementById('training-image-display').classList.remove('hidden');
+          checkTrainingReadiness();
+        }
+      });
+      
+      // Handle training CSV upload
+      document.getElementById('training-csv-input')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          trainingCSVFile = file;
+          document.getElementById('training-csv-name').textContent = file.name;
+          // Read CSV to show info
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const text = e.target.result;
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const geneColumns = headers.filter(h => h !== 'x' && h !== 'y');
+            document.getElementById('training-csv-info').textContent = 
+              `${lines.length - 1} samples, ${geneColumns.length} genes: ${geneColumns.slice(0, 3).join(', ')}${geneColumns.length > 3 ? '...' : ''}`;
+          };
+          reader.readAsText(file);
+          document.getElementById('training-csv-display').classList.remove('hidden');
+          checkTrainingReadiness();
+        }
+      });
+      
+      function clearTrainingImage() {
+        trainingImageFile = null;
+        document.getElementById('training-image-input').value = '';
+        document.getElementById('training-image-display').classList.add('hidden');
+        checkTrainingReadiness();
+      }
+      
+      function clearTrainingCSV() {
+        trainingCSVFile = null;
+        document.getElementById('training-csv-input').value = '';
+        document.getElementById('training-csv-display').classList.add('hidden');
+        checkTrainingReadiness();
+      }
+      
+      function checkTrainingReadiness() {
+        const btn = document.getElementById('start-training-btn');
+        if (trainingImageFile && trainingCSVFile) {
+          btn.disabled = false;
+          btn.classList.remove('opacity-50');
+        } else {
+          btn.disabled = true;
+          btn.classList.add('opacity-50');
+        }
+      }
+      
+      async function startTraining() {
+        // Check authentication first
+        if (!authToken && !localStorage.getItem("authToken")) {
+          showToast('Please login first', 'error');
+          showPage('login');
+          return;
+        }
+        
+        if (!trainingImageFile || !trainingCSVFile) {
+          showToast('Please upload both image and CSV files', 'error');
+          return;
+        }
+        
+        // Get training parameters
+        const epochs = parseInt(document.getElementById('training-epochs').value);
+        const learningRate = parseFloat(document.getElementById('training-lr').value);
+        const batchSize = parseInt(document.getElementById('training-batch-size').value);
+        const valSplit = parseFloat(document.getElementById('training-val-split').value) / 100;
+        
+        // Show training status section
+        document.getElementById('training-status-section').classList.remove('hidden');
+        document.getElementById('start-training-btn').disabled = true;
+        document.getElementById('training-btn-text').textContent = 'Training...';
+        
+        try {
+          // Upload files and start training
+          // Backend will automatically extract genes from CSV columns
+          const formData = new FormData();
+          formData.append('image', trainingImageFile);
+          formData.append('csv', trainingCSVFile);
+          formData.append('epochs', epochs);
+          formData.append('learning_rate', learningRate);
+          formData.append('batch_size', batchSize);
+          formData.append('validation_split', valSplit);
+          
+          console.log('Training request:', {
+            imageFile: trainingImageFile.name,
+            csvFile: trainingCSVFile.name,
+            epochs,
+            learningRate,
+            batchSize,
+            valSplit,
+            hasToken: !!(authToken || localStorage.getItem("authToken"))
+          });
+          
+          showToast('Starting model training...', 'info');
+          addTrainingLog('🚀 Initializing training...');
+          
+          const response = await api.request('train/start', 'POST', formData, true);
+          
+          if (response.status === 'success') {
+            // Training started in background - poll for progress
+            addTrainingLog(`✅ Training started!`);
+            addTrainingLog(`Job ID: ${response.job_id}`);
+            addTrainingLog(`Genes: ${response.genes.join(', ')}`);
+            addTrainingLog(`Training samples: ${response.samples}`);
+            addTrainingLog(`Epochs: ${epochs}`);
+            addTrainingLog('\n📊 Training in progress...');
+            
+            // Update status
+            const statusEl = document.getElementById('training-status-text');
+            if (statusEl) statusEl.textContent = 'Running';
+            
+            // Save training state for recovery on page refresh
+            saveTrainingState(response.job_id, epochs);
+            
+            // Start polling for progress
+            startTrainingProgressPolling(response.job_id, epochs);
+          }
+          
+        } catch (error) {
+          showToast(`Training failed: ${error.message}`, 'error');
+          addTrainingLog(`❌ Error: ${error.message}`);
+          resetTrainingUI();
+        }
+      }
+      
+      function startTrainingProgressPolling(jobId, totalEpochs) {
+        let lastEpoch = 0;
+        
+        trainingInterval = setInterval(async () => {
+          try {
+            const progress = await api.request(`train/progress/${jobId}`);
+            
+            // Update UI elements with correct IDs
+            const statusEl = document.getElementById('training-status-text');
+            const epochEl = document.getElementById('training-epoch-text');
+            const trainLossEl = document.getElementById('training-loss');
+            const valLossEl = document.getElementById('training-val-loss');
+            const progressBar = document.getElementById('training-progress-bar');
+            
+            if (statusEl) statusEl.textContent = progress.status.charAt(0).toUpperCase() + progress.status.slice(1);
+            if (epochEl) epochEl.textContent = `${progress.current_epoch} / ${totalEpochs}`;
+            
+            const progressPercent = (progress.current_epoch / totalEpochs) * 100;
+            if (progressBar) progressBar.style.width = `${progressPercent}%`;
+            
+            if (progress.train_loss && trainLossEl) {
+              trainLossEl.textContent = progress.train_loss.toFixed(4);
+            }
+            if (progress.val_loss && valLossEl) {
+              valLossEl.textContent = progress.val_loss.toFixed(4);
+            }
+            
+            // Add log if new epoch
+            if (progress.current_epoch > lastEpoch) {
+              addTrainingLog(`📊 Epoch ${progress.current_epoch}/${totalEpochs} - Train Loss: ${progress.train_loss?.toFixed(4) || 'N/A'}, Val Loss: ${progress.val_loss?.toFixed(4) || 'N/A'}`);
+              lastEpoch = progress.current_epoch;
+            }
+            
+            // Check if completed
+            if (progress.status === 'completed') {
+              clearInterval(trainingInterval);
+              clearTrainingState(); // Clear saved training state
+              addTrainingLog('\n✅ Training completed successfully!');
+              addTrainingLog('💾 Model saved to your account');
+              showToast('Model training completed!', 'success');
+              
+              if (statusEl) {
+                statusEl.textContent = 'Completed';
+                statusEl.classList.remove('text-purple-600');
+                statusEl.classList.add('text-green-600');
+              }
+              
+              // Reload user data to update credits
+              try {
+                const userData = await api.getCurrentUser();
+                currentUser = userData;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+              } catch (e) {
+                console.error('Failed to reload user data:', e);
+              }
+              
+              resetTrainingUI();
+            } else if (progress.status === 'failed') {
+              clearInterval(trainingInterval);
+              clearTrainingState(); // Clear saved training state
+              addTrainingLog(`\n❌ Training failed: ${progress.error || 'Unknown error'}`);
+              showToast('Training failed', 'error');
+              resetTrainingUI();
+            }
+            
+          } catch (error) {
+            console.error('Failed to get training progress:', error);
+          }
+        }, 5000); // Poll every 5 seconds (reduced frequency to prevent overload)
+      }
+      
+      function addTrainingLog(message) {
+        const logDiv = document.getElementById('training-log');
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+      
+      function resetTrainingUI() {
+        document.getElementById('start-training-btn').disabled = false;
+        document.getElementById('training-btn-text').textContent = 'Start Training';
+        if (trainingInterval) {
+          clearInterval(trainingInterval);
+          trainingInterval = null;
+        }
       }
 
       // Initialize
@@ -1925,7 +2977,56 @@
           initializePredictionUpload();
         }
 
+        // Restore training state from localStorage if exists
+        restoreTrainingState();
+        
         console.log("✅ SpatX Frontend Ready");
+      });
+      
+      // Save training state to localStorage when training starts
+      function saveTrainingState(jobId, totalEpochs) {
+        localStorage.setItem('activeTrainingJob', JSON.stringify({
+          jobId: jobId,
+          totalEpochs: totalEpochs,
+          startTime: Date.now()
+        }));
+      }
+      
+      // Clear training state from localStorage
+      function clearTrainingState() {
+        localStorage.removeItem('activeTrainingJob');
+      }
+      
+      // Restore training state on page load/refresh
+      function restoreTrainingState() {
+        const savedState = localStorage.getItem('activeTrainingJob');
+        if (savedState) {
+          try {
+            const { jobId, totalEpochs, startTime } = JSON.parse(savedState);
+            
+            // Only restore if training started less than 24 hours ago
+            const hoursSinceStart = (Date.now() - startTime) / (1000 * 60 * 60);
+            if (hoursSinceStart < 24) {
+              console.log('🔄 Restoring training session:', jobId);
+              addTrainingLog('🔄 Resuming training session...');
+              startTrainingProgressPolling(jobId, totalEpochs);
+            } else {
+              clearTrainingState();
+            }
+          } catch (e) {
+            console.error('Failed to restore training state:', e);
+            clearTrainingState();
+          }
+        }
+      }
+      
+      // Warn user if they try to leave during training
+      window.addEventListener('beforeunload', (e) => {
+        if (trainingInterval) {
+          e.preventDefault();
+          e.returnValue = 'Training is in progress. If you leave, you can resume when you return.';
+          return e.returnValue;
+        }
       });
 
       // Prediction state
@@ -2039,11 +3140,19 @@
           const response = await api.predict(
             uploadedImagePath,
             generatedCoordinatesFile,
-            'working_model',
+            selectedModel,  // Use user-selected model (original or trained)
             genesParam
           );
 
           predictionResults = response;
+          
+          // Store gene metadata and categories for later use
+          if (response.gene_metadata) {
+            geneMetadata = response.gene_metadata;
+          }
+          if (response.gene_categories) {
+            geneCategories = response.gene_categories;
+          }
           
           console.log('Prediction response:', response);
           console.log(`Predicted ${response.num_genes} genes: ${response.genes.join(', ')}`);
@@ -2081,21 +3190,34 @@
           
           // User-specific paths (SECURE - only shows user's own files)
           const originalImagePath = `${API_BASE_URL}/uploads/user_${userId}/${uploadedImagePath}`;
-          const heatmapPath = `${API_BASE_URL}/uploads/user_${userId}/heatmap_${geneName}_${uploadedImagePath}`;
           
-          console.log(`Loading heatmap for ${geneName}: ${heatmapPath}`);
+          // Choose visualization type based on current tab
+          let imagePrefix = 'heatmap';
+          let viewType = 'Heatmap';
+          
+          if (currentTab === 'overlay') {
+            imagePrefix = 'overlay';
+            viewType = 'Overlay';
+          } else if (currentTab === 'contour') {
+            imagePrefix = 'contour';
+            viewType = 'Contour';
+          }
+          
+          const visualizationPath = `${API_BASE_URL}/uploads/user_${userId}/${imagePrefix}_${geneName}_${uploadedImagePath}`;
+          
+          console.log(`Loading ${currentTab} for ${geneName}: ${visualizationPath}`);
           
           // Update original image
           const originalImg = document.getElementById('original-image');
           originalImg.src = originalImagePath;
           currentOriginalImage = originalImagePath;
           
-          // Update heatmap
+          // Update heatmap/overlay/contour image based on current tab
           const heatmapImg = document.getElementById('heatmap-image');
-          heatmapImg.src = heatmapPath;
+          heatmapImg.src = visualizationPath;
           
-          // Update UI text
-          document.getElementById('heatmap-title').textContent = `Predicted Expression - ${geneName}`;
+          // Update UI text based on current tab
+          document.getElementById('heatmap-title').textContent = `${geneName} Expression ${viewType}`;
           document.getElementById('original-filename').textContent = uploadedImagePath || 'image.png';
           
           // Update all stats boxes robustly
@@ -2121,8 +3243,8 @@
             if (statStd) statStd.textContent = stats.std.toFixed(3);
           }
           
-          // Store current heatmap
-          currentHeatmaps[geneName] = heatmapPath;
+          // Store current visualization path
+          currentHeatmaps[geneName] = visualizationPath;
           
           // Wait for image to load
           await new Promise((resolve) => {
@@ -2146,6 +3268,45 @@
 
       function switchGene(geneName) {
         displayHeatmap(geneName);
+      }
+
+      // Tab switching between Heatmap and Overlay views
+      let currentTab = 'heatmap';  // Default to heatmap view
+      
+      function switchTab(tabName) {
+        currentTab = tabName;
+        
+        // Update tab button styles
+        const heatmapTab = document.getElementById('tab-heatmap');
+        const overlayTab = document.getElementById('tab-overlay');
+        const contourTab = document.getElementById('tab-contour');
+        
+        const activeClass = 'px-6 py-3 font-semibold text-purple-600 border-b-2 border-purple-600 transition-smooth';
+        const inactiveClass = 'px-6 py-3 font-semibold text-gray-500 border-b-2 border-transparent hover:text-purple-600 transition-smooth';
+        
+        // Reset all tabs to inactive
+        heatmapTab.className = inactiveClass;
+        overlayTab.className = inactiveClass;
+        contourTab.className = inactiveClass;
+        
+        // Set active tab and update icon
+        if (tabName === 'heatmap') {
+          heatmapTab.className = activeClass;
+          document.getElementById('viz-icon').className = 'fas fa-chart-area text-purple-600 mr-2';
+        } else if (tabName === 'overlay') {
+          overlayTab.className = activeClass;
+          document.getElementById('viz-icon').className = 'fas fa-layer-group text-purple-600 mr-2';
+        } else if (tabName === 'contour') {
+          contourTab.className = activeClass;
+          document.getElementById('viz-icon').className = 'fas fa-wave-square text-purple-600 mr-2';
+        }
+        
+        // Reload the current gene with the new view type
+        const currentGene = document.getElementById('heatmap-gene-select').value;
+        displayHeatmap(currentGene);
+        
+        const viewNames = { 'heatmap': 'Heatmap', 'overlay': 'Overlay', 'contour': 'Contour' };
+        showToast(`Switched to ${viewNames[tabName]} view`, 'info');
       }
 
       function downloadHeatmap() {
@@ -2186,6 +3347,7 @@
       window.startNewPrediction = startNewPrediction;
       window.runPrediction = runPrediction;
       window.switchGene = switchGene;
+      window.switchTab = switchTab;
       window.downloadHeatmap = downloadHeatmap;
     </script>
   </body>

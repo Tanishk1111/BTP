@@ -19,10 +19,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # Import model components
-from spatx_core.spatx_core.models.cit_to_gene.CiT_Net_T import CIT
-from spatx_core.spatx_core.models.cit_to_gene.CiTGene import CITGenePredictor
-from spatx_core.spatx_core.data_adapters import BreastDataAdapter
-from spatx_core.spatx_core.trainers import SimpleCITTrainer
+from spatx_core.models.cit_to_gene.CiT_Net_T import CIT
+from spatx_core.models.cit_to_gene.CiTGene import CITGenePredictor
+from spatx_core.data_adapters import BreastDataAdapter
+from spatx_core.trainers import SimpleCITTrainer
 
 # Configuration
 UPLOAD_DIR = Path("uploads")

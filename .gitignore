@@ -265,9 +265,10 @@ test_data/
 user_models/
 uploads/
 results/
+training_data/
 spatx_deployment.zip
 
-# Keep only essential markdown docs
+# Keep only essential markdown docs (ignore all status/old docs)
 COMPLETED_FRONTEND_INTEGRATION.md
 FRONTEND_STATUS.md
 HEATMAP_IMPROVEMENTS.md
@@ -279,6 +280,11 @@ PRODUCTION_READY.md
 READY_TO_TEST.md
 WHAT_I_CHANGED.md
 TEST_YOUR_FRONTEND.md
+OVERLAY_FEATURE_ADDED.md
+OVERLAY_VISUAL_GUIDE.md
+README_SIMPLE.md
+START_HERE.md
+50_GENE_MODEL_INTEGRATED.md
 
 # Old/unused files
 init.sql
@@ -288,6 +294,14 @@ test_full_heatmap.py
 test_prediction_only.py
 test_simple.py
 requirements_simple.txt
+deploy_overlay_update.ps1
+start_local.bat
 
 # User-specific files
 user_*/
+
+# Sample/test images (keep structure, ignore files)
+*.tif
+*.tiff
+Untitled.png
+Image_2x2.png
