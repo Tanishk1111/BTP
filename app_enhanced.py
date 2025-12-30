@@ -101,6 +101,31 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 from app_training import router as training_router
 app.include_router(training_router)
 
+# Include Pratyaksha (Spatial Viewer) router
+try:
+    from app_pratyaksha import router as pratyaksha_router, PRATYAKSHA_TILES_DIR as TILES_DIR
+    app.include_router(pratyaksha_router)
+    
+    # Mount Pratyaksha tiles as static files (uses path detected by app_pratyaksha)
+    if TILES_DIR.exists():
+        app.mount("/pratyaksha_tiles", StaticFiles(directory=str(TILES_DIR)), name="pratyaksha_tiles")
+        print(f"✅ Pratyaksha tiles mounted from {TILES_DIR}")
+    else:
+        # Try fallback paths for local development
+        import sys
+        if sys.platform == "win32":
+            local_tiles = Path(__file__).parent / "Pratyaksha_Base_Code" / "Version_0b" / "tiles"
+            if local_tiles.exists():
+                app.mount("/pratyaksha_tiles", StaticFiles(directory=str(local_tiles)), name="pratyaksha_tiles")
+                print(f"✅ Pratyaksha tiles mounted from cloned repo: {local_tiles}")
+            else:
+                print(f"⚠️ Pratyaksha tiles not found. Create pratyaksha_tiles/ folder or clone the repo.")
+        else:
+            print(f"⚠️ Pratyaksha tiles directory not found: {TILES_DIR}")
+    print("✅ Pratyaksha router loaded")
+except ImportError as e:
+    print(f"⚠️ Pratyaksha module not available: {e}")
+
 # ============================================================================
 # AUTHENTICATION UTILITIES
 # ============================================================================

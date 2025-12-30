@@ -13,6 +13,9 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
       rel="stylesheet"
     />
+    
+    <!-- OpenSeadragon for Pratyaksha Viewer -->
+    <script src="https://openseadragon.github.io/openseadragon/openseadragon.min.js"></script>
 
     <style>
       /* Your exact CSS variables and styling */
@@ -487,19 +490,29 @@
 
               <!-- CTA Buttons -->
               <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in-delayed" style="animation-delay: 0.4s">
-                <button onclick="showPage('training')" class="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+                <button onclick="showPage('training')" class="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
                   <span class="relative z-10 flex items-center gap-2">
                     <i class="fas fa-rocket"></i>
                     Start Training
                     <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                   </span>
-                  <div class="absolute inset-0 bg-gradient-to-r from-purple-700 to-blue-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div class="absolute inset-0 bg-gradient-to-r from-purple-700 to-pink-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </button>
-                <button onclick="showPage('prediction')" class="px-8 py-4 bg-white text-gray-700 font-semibold rounded-xl border-2 border-gray-200 hover:border-purple-300 hover:bg-purple-50 transform hover:-translate-y-1 transition-all duration-300 shadow-md hover:shadow-xl">
-                  <span class="flex items-center gap-2">
+                <button onclick="showPage('prediction')" class="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+                  <span class="relative z-10 flex items-center gap-2">
                     <i class="fas fa-chart-bar"></i>
                     Make Predictions
+                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                   </span>
+                  <div class="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </button>
+                <button onclick="showPage('pratyaksha-upload')" class="group relative px-8 py-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+                  <span class="relative z-10 flex items-center gap-2">
+                    <i class="fas fa-microscope"></i>
+                    Spatial Viewer
+                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                  </span>
+                  <div class="absolute inset-0 bg-gradient-to-r from-teal-600 to-cyan-700 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </button>
               </div>
 
@@ -533,7 +546,7 @@
               </p>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            <div class="grid md:grid-cols-3 gap-6 max-w-7xl mx-auto">
               <!-- Training Phase Card -->
               <div
                 class="group relative bg-white rounded-2xl border-2 border-gray-100 hover:border-transparent hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden"
@@ -668,6 +681,73 @@
                   <button class="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg group-hover:shadow-xl transform group-hover:scale-[1.02] transition-all duration-300">
                     <span class="flex items-center justify-center gap-2">
                       Make Predictions
+                      <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Spatial Viewer Phase Card (Phase 3) -->
+              <div
+                class="group relative bg-white rounded-2xl border-2 border-gray-100 hover:border-transparent hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden"
+                onclick="showPage('pratyaksha-upload')"
+              >
+                <!-- Gradient Accent Bar -->
+                <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                <div class="p-6 md:p-8">
+                  <!-- Icon & Number Badge -->
+                  <div class="flex items-start justify-between mb-6">
+                    <div class="w-14 h-14 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <i class="fas fa-microscope text-white text-2xl"></i>
+                    </div>
+                  </div>
+
+                  <!-- Title & Badge -->
+                  <div class="mb-4">
+                    <div class="inline-block px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full mb-3">
+                      PHASE 3
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">
+                      Spatial Viewer
+                    </h3>
+                    <p class="text-gray-600 leading-relaxed">
+                      Interactive analysis of spatial transcriptomics with ROI selection and differential expression
+                    </p>
+                  </div>
+
+                  <!-- Feature List -->
+                  <div class="space-y-3 mb-8">
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-teal-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-teal-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Upload Visium spatial data</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-teal-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-teal-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Draw ROIs for analysis</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-teal-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-teal-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">Differential gene expression</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-5 h-5 bg-teal-100 rounded-full flex items-center justify-center mt-0.5">
+                        <i class="fas fa-check text-teal-600 text-xs"></i>
+                      </div>
+                      <span class="text-sm text-gray-700">GO enrichment analysis</span>
+                    </div>
+                  </div>
+
+                  <!-- CTA Button -->
+                  <button class="w-full px-6 py-3.5 bg-gradient-to-r from-teal-500 to-cyan-600 text-white font-semibold rounded-xl shadow-lg group-hover:shadow-xl transform group-hover:scale-[1.02] transition-all duration-300">
+                    <span class="flex items-center justify-center gap-2">
+                      Launch Viewer
                       <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                     </span>
                   </button>
@@ -1840,6 +1920,291 @@
           </div>
         </main>
       </div>
+
+      <!-- ============================================ -->
+      <!-- PRATYAKSHA UPLOAD - Data Input Page -->
+      <!-- ============================================ -->
+      <div id="pratyaksha-upload-page" class="page">
+        <header class="bg-white shadow-lg border-b sticky top-0 z-40">
+          <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-4">
+                <button onclick="showPage('dashboard')" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <i class="fas fa-arrow-left text-gray-600"></i>
+                </button>
+                <div class="w-10 h-10 bg-gradient-to-r from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center">
+                  <i class="fas fa-microscope text-white text-lg"></i>
+                </div>
+                <div>
+                  <h1 class="text-xl font-bold text-gray-900">Pratyaksha Spatial Viewer</h1>
+                  <p class="text-sm text-gray-500">Upload your spatial transcriptomics data</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-full border border-teal-200">
+                <i class="fas fa-coins text-teal-600"></i>
+                <span id="pratyaksha-upload-credits" class="text-sm font-bold text-teal-700">0</span>
+                <span class="text-xs text-teal-600">credits</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="container mx-auto px-6 py-8 max-w-4xl">
+          <!-- Instructions -->
+          <div class="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-6 mb-8 border border-teal-100">
+            <h2 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+              <i class="fas fa-info-circle text-teal-600"></i>
+              Required Data Format
+            </h2>
+            <p class="text-gray-600 mb-4">Upload your 10x Genomics Visium spatial transcriptomics data:</p>
+            <div class="grid md:grid-cols-3 gap-4">
+              <div class="bg-white rounded-lg p-4 border border-teal-200">
+                <div class="text-teal-600 font-semibold mb-1"><i class="fas fa-image mr-2"></i>Tissue Image</div>
+                <p class="text-xs text-gray-500">Full resolution image (.tif, .png, .jpg)</p>
+              </div>
+              <div class="bg-white rounded-lg p-4 border border-teal-200">
+                <div class="text-teal-600 font-semibold mb-1"><i class="fas fa-map-marker-alt mr-2"></i>Spot Positions</div>
+                <p class="text-xs text-gray-500">tissue_positions_list.csv from spatial folder</p>
+              </div>
+              <div class="bg-white rounded-lg p-4 border border-cyan-200">
+                <div class="text-cyan-600 font-semibold mb-1"><i class="fas fa-database mr-2"></i>Expression Data <span class="text-xs">(Optional)</span></div>
+                <p class="text-xs text-gray-500">filtered_feature_bc_matrix.h5</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Form -->
+          <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+            <div class="space-y-6">
+              
+              <!-- Tissue Image Upload -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  <i class="fas fa-image mr-2 text-teal-600"></i>Tissue Image *
+                </label>
+                <div id="pratyaksha-image-drop" class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-teal-400 transition-colors cursor-pointer" onclick="document.getElementById('pratyaksha-image-input').click()">
+                  <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                  <p class="text-gray-600">Drop tissue image here or click to browse</p>
+                  <p class="text-xs text-gray-400 mt-1">Supported: .tif, .tiff, .png, .jpg</p>
+                  <p id="pratyaksha-image-name" class="text-sm text-teal-600 font-medium mt-2 hidden"></p>
+                </div>
+                <input type="file" id="pratyaksha-image-input" accept=".tif,.tiff,.png,.jpg,.jpeg" class="hidden" onchange="handlePratyakshaImageUpload(event)">
+              </div>
+
+              <!-- Positions CSV Upload -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  <i class="fas fa-map-marker-alt mr-2 text-teal-600"></i>Spot Positions CSV *
+                </label>
+                <div id="pratyaksha-positions-drop" class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-teal-400 transition-colors cursor-pointer" onclick="document.getElementById('pratyaksha-positions-input').click()">
+                  <i class="fas fa-file-csv text-3xl text-gray-400 mb-2"></i>
+                  <p class="text-gray-600">Drop tissue_positions_list.csv here</p>
+                  <p class="text-xs text-gray-400 mt-1">From spatial/ folder</p>
+                  <p id="pratyaksha-positions-name" class="text-sm text-teal-600 font-medium mt-2 hidden"></p>
+                </div>
+                <input type="file" id="pratyaksha-positions-input" accept=".csv" class="hidden" onchange="handlePratyakshaPositionsUpload(event)">
+              </div>
+
+              <!-- Expression H5 Upload (Optional) -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  <i class="fas fa-database mr-2 text-cyan-600"></i>Expression Data (Optional)
+                </label>
+                <div id="pratyaksha-h5-drop" class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-cyan-400 transition-colors cursor-pointer" onclick="document.getElementById('pratyaksha-h5-input').click()">
+                  <i class="fas fa-file-medical-alt text-3xl text-gray-400 mb-2"></i>
+                  <p class="text-gray-600">Drop .h5 expression file here (optional)</p>
+                  <p class="text-xs text-gray-400 mt-1">Required for DGE & GO analysis</p>
+                  <p id="pratyaksha-h5-name" class="text-sm text-cyan-600 font-medium mt-2 hidden"></p>
+                </div>
+                <input type="file" id="pratyaksha-h5-input" accept=".h5" class="hidden" onchange="handlePratyakshaH5Upload(event)">
+              </div>
+
+              <!-- Processing Status -->
+              <div id="pratyaksha-processing" class="hidden bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-6">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow">
+                    <i class="fas fa-spinner fa-spin text-teal-600 text-xl"></i>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-gray-900">Processing your data...</p>
+                    <p id="pratyaksha-processing-status" class="text-sm text-gray-600">Generating image tiles</p>
+                  </div>
+                </div>
+                <div class="mt-4 bg-white rounded-full h-2 overflow-hidden">
+                  <div id="pratyaksha-processing-bar" class="bg-gradient-to-r from-teal-500 to-cyan-500 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex gap-4 pt-4">
+                <button onclick="showPage('dashboard')" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium">
+                  <i class="fas fa-arrow-left mr-2"></i>Back
+                </button>
+                <button id="pratyaksha-process-btn" onclick="processPratyakshaData()" disabled class="flex-1 px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all">
+                  <i class="fas fa-cogs mr-2"></i>Process & Launch Viewer
+                </button>
+              </div>
+
+              <!-- Demo Mode Link -->
+              <div class="text-center pt-4 border-t border-gray-100">
+                <p class="text-sm text-gray-500">
+                  Want to try without uploading? 
+                  <button onclick="launchPratyakshaDemo()" class="text-teal-600 hover:text-teal-700 font-medium underline">
+                    Launch Demo Viewer
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- PRATYAKSHA - Spatial Transcriptomics Viewer -->
+      <!-- ============================================ -->
+      <div id="pratyaksha-page" class="page">
+        <div id="pratyaksha-container" style="display: flex; flex-direction: row; height: 100vh; width: 100vw; overflow: hidden; background: #0f172a;">
+          
+          <!-- OpenSeadragon Viewer Area -->
+          <div id="pratyaksha-viewer" style="flex: 1 1 auto; height: 100%; position: relative; background: #1e293b;">
+            <!-- Spots overlay canvas -->
+            <canvas id="pratyaksha-overlay" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10;"></canvas>
+            
+            <!-- ROI drawing canvas -->
+            <canvas id="pratyaksha-roi-canvas" style="position: absolute; top: 0; left: 0; z-index: 25; display: none; touch-action: none;"></canvas>
+            
+            <!-- Tooltip -->
+            <div id="pratyaksha-tooltip" style="position: absolute; display: none; background: rgba(0,0,0,0.9); color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; pointer-events: none; z-index: 35; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
+            
+            <!-- Top Action Buttons -->
+            <div style="position: absolute; top: 15px; left: 15px; z-index: 40; display: flex; gap: 10px;">
+              <button onclick="showPage('dashboard')" style="padding: 8px 12px; background: rgba(255,255,255,0.95); border: 1px solid #4b5563; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1f2937; transition: all 0.12s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <i class="fas fa-arrow-left"></i> Back
+              </button>
+            </div>
+            <div style="position: absolute; top: 15px; right: 360px; z-index: 40; display: flex; gap: 10px;">
+              <button id="pratyaksha-roi-btn" onclick="togglePratyakshaROI()" style="padding: 8px 12px; background: rgba(255,255,255,0.95); border: 1px solid #4b5563; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1f2937; transition: all 0.12s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                ROI Tool: Off
+              </button>
+              <button id="pratyaksha-overlay-btn" onclick="togglePratyakshaOverlay()" style="padding: 8px 12px; background: rgba(255,255,255,0.95); border: 1px solid #4b5563; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1f2937; transition: all 0.12s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                Hide Overlay
+              </button>
+            </div>
+            
+            <!-- Loading indicator -->
+            <div id="pratyaksha-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; display: none;">
+              <div style="background: rgba(0,0,0,0.8); padding: 20px 30px; border-radius: 12px; text-align: center;">
+                <i class="fas fa-spinner fa-spin text-3xl text-cyan-400 mb-3"></i>
+                <p style="color: white; font-size: 14px;">Loading spatial data...</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Control Panel (Right Dock) -->
+          <div id="pratyaksha-panel" style="position: relative; width: 340px; height: 100%; overflow-y: auto; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border-left: 1px solid #334155; padding: 20px; font-size: 13px; z-index: 10; box-shadow: -4px 0 12px rgba(0,0,0,0.2);">
+            
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600; text-align: center; padding-bottom: 10px; border-bottom: 2px solid #06b6d4; background: linear-gradient(to right, #06b6d4, #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent;">
+              Pratyaksha Analysis
+            </h3>
+            
+            <!-- ROI Management -->
+            <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #334155;">
+              <h4 style="margin: 0 0 12px 0; color: #e2e8f0; font-size: 14px; font-weight: 600;">
+                <i class="fas fa-draw-polygon mr-2 text-cyan-400"></i>ROI Management
+              </h4>
+              <p style="font-size: 11px; color: #94a3b8; font-style: italic; margin-bottom: 8px; line-height: 1.3;">
+                Turn on ROI Tool and draw regions by clicking and dragging. Click on ROIs to select/deselect them.
+              </p>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button onclick="annotatePratyakshaROIs()" style="padding: 8px 14px; background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                  <i class="fas fa-tag mr-2"></i>Annotate Selected ROIs
+                </button>
+                <button onclick="deletePratyakshaROIs()" style="padding: 8px 14px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                  <i class="fas fa-trash mr-2"></i>Delete Selected ROIs
+                </button>
+              </div>
+            </div>
+            
+            <!-- Gene Expression -->
+            <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #334155;">
+              <h4 style="margin: 0 0 12px 0; color: #e2e8f0; font-size: 14px; font-weight: 600;">
+                <i class="fas fa-dna mr-2 text-purple-400"></i>Gene Expression Analysis
+              </h4>
+              <input type="text" id="pratyaksha-gene-input" placeholder="Gene symbols (e.g., TP53, GATA3)" style="width: 100%; padding: 8px 12px; margin-bottom: 8px; box-sizing: border-box; border: 1px solid #475569; border-radius: 6px; font-size: 13px; background: #1e293b; color: #e2e8f0;">
+              <label style="display: block; margin: 8px 0; font-size: 12px; color: #94a3b8; font-weight: 500;">Select ROIs for analysis:</label>
+              <div id="pratyaksha-roi-expr" style="max-height: 100px; overflow-y: auto; border: 1px solid #475569; padding: 8px; background: #0f172a; border-radius: 6px; margin-bottom: 10px; color: #cbd5e1; font-size: 12px;">
+                <span style="color: #64748b; font-style: italic;">No ROIs drawn yet</span>
+              </div>
+              <p style="font-size: 11px; color: #64748b; font-style: italic; margin-bottom: 8px;">Leave all ROIs unchecked to analyze all barcodes</p>
+              <button onclick="fetchPratyakshaExpression()" style="width: 100%; padding: 8px 14px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                <i class="fas fa-database mr-2"></i>Fetch Expression Data
+              </button>
+            </div>
+            
+            <!-- Differential Expression -->
+            <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #334155;">
+              <h4 style="margin: 0 0 12px 0; color: #e2e8f0; font-size: 14px; font-weight: 600;">
+                <i class="fas fa-balance-scale mr-2 text-pink-400"></i>Differential Gene Expression
+              </h4>
+              <label style="display: block; margin: 8px 0 4px 0; font-size: 12px; color: #94a3b8; font-weight: 500;">Group 1 ROIs:</label>
+              <div id="pratyaksha-roi-g1" style="max-height: 80px; overflow-y: auto; border: 1px solid #475569; padding: 8px; background: #0f172a; border-radius: 6px; margin-bottom: 8px; color: #cbd5e1; font-size: 12px;">
+                <span style="color: #64748b; font-style: italic;">No ROIs drawn yet</span>
+              </div>
+              <label style="display: block; margin: 8px 0 4px 0; font-size: 12px; color: #94a3b8; font-weight: 500;">Group 2 ROIs:</label>
+              <div id="pratyaksha-roi-g2" style="max-height: 80px; overflow-y: auto; border: 1px solid #475569; padding: 8px; background: #0f172a; border-radius: 6px; margin-bottom: 8px; color: #cbd5e1; font-size: 12px;">
+                <span style="color: #64748b; font-style: italic;">No ROIs drawn yet</span>
+              </div>
+              <label style="display: flex; align-items: center; margin: 8px 0; font-size: 12px; color: #94a3b8; font-weight: 500; cursor: pointer;">
+                <input type="checkbox" id="pratyaksha-vs-rest" style="margin-right: 8px;"> Compare Group 1 vs All Other Spots
+              </label>
+              <button onclick="runPratyakshaDGE()" style="width: 100%; padding: 8px 14px; background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+                <i class="fas fa-chart-line mr-2"></i>Run Differential Expression
+              </button>
+            </div>
+            
+            <!-- Results -->
+            <div style="margin-bottom: 20px;">
+              <h4 style="margin: 0 0 12px 0; color: #e2e8f0; font-size: 14px; font-weight: 600;">
+                <i class="fas fa-poll mr-2 text-green-400"></i>Results
+              </h4>
+              <div id="pratyaksha-results" style="background: #0f172a; border: 1px solid #475569; padding: 12px; font-size: 11px; white-space: pre-wrap; word-wrap: break-word; max-height: 180px; overflow-y: auto; border-radius: 6px; font-family: 'Courier New', monospace; color: #94a3b8;">
+No results yet. Use the tools above to analyze your spatial data.
+              </div>
+              <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
+                <button id="pratyaksha-dl-json" onclick="downloadPratyakshaJSON()" disabled style="flex: 1; min-width: 45%; padding: 6px 10px; background: #475569; color: #94a3b8; border: none; border-radius: 6px; cursor: not-allowed; font-size: 11px;">
+                  <i class="fas fa-download mr-1"></i>JSON
+                </button>
+                <button id="pratyaksha-dl-csv" onclick="downloadPratyakshaCSV()" disabled style="flex: 1; min-width: 45%; padding: 6px 10px; background: #475569; color: #94a3b8; border: none; border-radius: 6px; cursor: not-allowed; font-size: 11px;">
+                  <i class="fas fa-file-csv mr-1"></i>CSV
+                </button>
+                <button id="pratyaksha-go-btn" onclick="runPratyakshaGO()" disabled style="flex: 1; min-width: 100%; padding: 6px 10px; background: #475569; color: #94a3b8; border: none; border-radius: 6px; cursor: not-allowed; font-size: 11px;">
+                  <i class="fas fa-project-diagram mr-1"></i>Run GO Enrichment
+                </button>
+              </div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button onclick="exportPratyakshaSession()" style="flex: 1; padding: 6px 10px; background: #334155; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px; cursor: pointer; font-size: 11px;">
+                  <i class="fas fa-upload mr-1"></i>Export Session
+                </button>
+                <button onclick="document.getElementById('pratyaksha-import-input').click()" style="flex: 1; padding: 6px 10px; background: #334155; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px; cursor: pointer; font-size: 11px;">
+                  <i class="fas fa-download mr-1"></i>Import Session
+                </button>
+                <input type="file" id="pratyaksha-import-input" accept=".json" style="display: none;" onchange="importPratyakshaSession(event)">
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Annotation Modal -->
+        <div id="pratyaksha-annot-modal" style="position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); background: #1e293b; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); padding: 25px; z-index: 1000; display: none; width: 400px; max-width: 90%; border: 2px solid #06b6d4;">
+          <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px; color: #e2e8f0;">Annotate ROI(s)</div>
+          <div id="pratyaksha-annot-list" style="font-size: 13px; margin-bottom: 12px; color: #94a3b8;"></div>
+          <textarea id="pratyaksha-annot-text" placeholder="Enter annotation for selected ROI(s)" style="width: 100%; height: 80px; padding: 10px; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: #e2e8f0; font-size: 13px; resize: none;"></textarea>
+          <div style="text-align: right; margin-top: 12px;">
+            <button onclick="savePratyakshaAnnotation()" style="padding: 8px 16px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; margin-right: 8px;">Save</button>
+            <button onclick="closePratyakshaAnnotation()" style="padding: 8px 16px; background: #475569; color: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Cancel</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Toast Container -->
@@ -2049,7 +2414,7 @@
         console.log(`📍 Navigating to: ${pageId}`);
 
         // Check authentication for protected pages
-        const protectedPages = ['dashboard', 'prediction', 'gene-selection', 'heatmap', 'training'];
+        const protectedPages = ['dashboard', 'prediction', 'gene-selection', 'heatmap', 'training', 'pratyaksha', 'pratyaksha-upload'];
         if (protectedPages.includes(pageId) && !authToken) {
           showToast('Please login first', 'error');
           pageId = 'login';
@@ -2064,6 +2429,11 @@
         const page = document.getElementById(pageId + "-page");
         if (page) {
           page.classList.add("active");
+        }
+        
+        // Initialize Pratyaksha viewer when navigating to it
+        if (pageId === 'pratyaksha') {
+          setTimeout(() => initPratyaksha(), 100);
         }
 
         // Update user names and credits on all pages
@@ -3349,6 +3719,860 @@
       window.switchGene = switchGene;
       window.switchTab = switchTab;
       window.downloadHeatmap = downloadHeatmap;
+
+      // ============================================
+      // PRATYAKSHA UPLOAD - Data Upload Handlers
+      // ============================================
+      
+      let pratyakshaUploadedImage = null;
+      let pratyakshaUploadedPositions = null;
+      let pratyakshaUploadedH5 = null;
+      
+      function handlePratyakshaImageUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+          pratyakshaUploadedImage = file;
+          const nameEl = document.getElementById('pratyaksha-image-name');
+          nameEl.textContent = `✓ ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+          nameEl.classList.remove('hidden');
+          document.getElementById('pratyaksha-image-drop').classList.add('border-teal-400', 'bg-teal-50');
+          checkPratyakshaUploadReady();
+        }
+      }
+      
+      function handlePratyakshaPositionsUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+          pratyakshaUploadedPositions = file;
+          const nameEl = document.getElementById('pratyaksha-positions-name');
+          nameEl.textContent = `✓ ${file.name}`;
+          nameEl.classList.remove('hidden');
+          document.getElementById('pratyaksha-positions-drop').classList.add('border-teal-400', 'bg-teal-50');
+          checkPratyakshaUploadReady();
+        }
+      }
+      
+      function handlePratyakshaH5Upload(event) {
+        const file = event.target.files[0];
+        if (file) {
+          pratyakshaUploadedH5 = file;
+          const nameEl = document.getElementById('pratyaksha-h5-name');
+          nameEl.textContent = `✓ ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+          nameEl.classList.remove('hidden');
+          document.getElementById('pratyaksha-h5-drop').classList.add('border-cyan-400', 'bg-cyan-50');
+        }
+      }
+      
+      function checkPratyakshaUploadReady() {
+        const btn = document.getElementById('pratyaksha-process-btn');
+        if (pratyakshaUploadedImage && pratyakshaUploadedPositions) {
+          btn.disabled = false;
+        } else {
+          btn.disabled = true;
+        }
+      }
+      
+      async function processPratyakshaData() {
+        if (!pratyakshaUploadedImage || !pratyakshaUploadedPositions) {
+          showToast('Please upload both image and positions file', 'error');
+          return;
+        }
+        
+        const processingDiv = document.getElementById('pratyaksha-processing');
+        const statusText = document.getElementById('pratyaksha-processing-status');
+        const progressBar = document.getElementById('pratyaksha-processing-bar');
+        const processBtn = document.getElementById('pratyaksha-process-btn');
+        
+        processingDiv.classList.remove('hidden');
+        processBtn.disabled = true;
+        
+        try {
+          // Step 1: Upload image
+          statusText.textContent = 'Uploading tissue image...';
+          progressBar.style.width = '20%';
+          
+          const formData = new FormData();
+          formData.append('image', pratyakshaUploadedImage);
+          formData.append('positions_csv', pratyakshaUploadedPositions);
+          if (pratyakshaUploadedH5) {
+            formData.append('expression_h5', pratyakshaUploadedH5);
+          }
+          
+          const response = await fetch(`${API_BASE_URL}/pratyaksha/process`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken || localStorage.getItem('authToken')}`
+            },
+            body: formData
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Processing failed');
+          }
+          
+          statusText.textContent = 'Generating image tiles...';
+          progressBar.style.width = '60%';
+          
+          const result = await response.json();
+          
+          statusText.textContent = 'Finalizing...';
+          progressBar.style.width = '100%';
+          
+          showToast('Data processed successfully!', 'success');
+          
+          // Store the session info and launch viewer
+          pratyakshaSessionId = result.session_id;
+          setTimeout(() => {
+            showPage('pratyaksha');
+          }, 500);
+          
+        } catch (error) {
+          console.error('Processing error:', error);
+          showToast(`Processing failed: ${error.message}`, 'error');
+          processingDiv.classList.add('hidden');
+          processBtn.disabled = false;
+        }
+      }
+      
+      function launchPratyakshaDemo() {
+        showToast('Loading demo viewer with sample data...', 'info');
+        showPage('pratyaksha');
+      }
+      
+      // Make upload functions global
+      window.handlePratyakshaImageUpload = handlePratyakshaImageUpload;
+      window.handlePratyakshaPositionsUpload = handlePratyakshaPositionsUpload;
+      window.handlePratyakshaH5Upload = handlePratyakshaH5Upload;
+      window.processPratyakshaData = processPratyakshaData;
+      window.launchPratyakshaDemo = launchPratyakshaDemo;
+
+      // ============================================
+      // PRATYAKSHA - Spatial Transcriptomics Viewer
+      // ============================================
+      
+      // Pratyaksha State
+      let pratyakshaViewer = null;
+      let pratyakshaBarcodes = [];
+      let pratyakshaRois = [];
+      let pratyakshaNextRoiId = 1;
+      let pratyakshaOverlayVisible = true;
+      let pratyakshaRoiMode = false;
+      let pratyakshaIsDrawing = false;
+      let pratyakshaCurrentPath = [];
+      let pratyakshaHoveredBarcode = null;
+      let pratyakshaLastResults = null;
+      let pratyakshaSessionId = null;  // For user-uploaded data
+      let pratyakshaClickStartPoint = null;
+      
+      // Initialize Pratyaksha when page is shown
+      function initPratyaksha() {
+        if (pratyakshaViewer) return; // Already initialized
+        
+        const viewerElement = document.getElementById('pratyaksha-viewer');
+        if (!viewerElement) return;
+        
+        document.getElementById('pratyaksha-loading').style.display = 'block';
+        
+        // Determine tile source based on session or demo
+        let tileSource, barcodesUrl;
+        if (pratyakshaSessionId) {
+          // User uploaded data
+          tileSource = `${API_BASE_URL}/pratyaksha/session/${pratyakshaSessionId}/tiles/fullres.dzi`;
+          barcodesUrl = `${API_BASE_URL}/pratyaksha/session/${pratyakshaSessionId}/barcodes`;
+          console.log(`📍 Loading session data: ${pratyakshaSessionId}`);
+        } else {
+          // Demo data from static tiles
+          tileSource = `${API_BASE_URL}/pratyaksha_tiles/fullres.dzi`;
+          barcodesUrl = `${API_BASE_URL}/pratyaksha_tiles/barcodes_fullres.json`;
+          console.log(`📍 Loading demo data`);
+        }
+        
+        // Initialize OpenSeadragon
+        pratyakshaViewer = OpenSeadragon({
+          id: "pratyaksha-viewer",
+          prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
+          tileSources: tileSource,
+          gestureSettingsMouse: { clickToZoom: false }
+        });
+        
+        pratyakshaViewer.addHandler("open", () => {
+          syncPratyakshaCanvases();
+          updatePratyakshaOverlay();
+          drawAllPratyakshaROIs();
+          document.getElementById('pratyaksha-loading').style.display = 'none';
+          showToast('Pratyaksha viewer loaded!', 'success');
+        });
+        
+        pratyakshaViewer.addHandler("open-failed", () => {
+          document.getElementById('pratyaksha-loading').style.display = 'none';
+          showToast('Failed to load spatial image tiles. Make sure tiles are uploaded to the server.', 'error');
+        });
+        
+        pratyakshaViewer.addHandler("viewport-change", () => {
+          updatePratyakshaOverlay();
+          drawAllPratyakshaROIs();
+        });
+        
+        pratyakshaViewer.addHandler("resize", () => {
+          syncPratyakshaCanvases();
+          updatePratyakshaOverlay();
+          drawAllPratyakshaROIs();
+        });
+        
+        // Load barcode data (use barcodesUrl from earlier)
+        fetch(barcodesUrl)
+          .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+          .then(data => {
+            pratyakshaBarcodes = data;
+            console.log(`✅ Loaded ${pratyakshaBarcodes.length} barcodes`);
+            if (pratyakshaViewer.isOpen()) updatePratyakshaOverlay();
+          })
+          .catch(e => {
+            console.error("Failed to load barcode JSON:", e);
+            showToast('Failed to load barcode positions', 'error');
+          });
+        
+        // Setup ROI canvas events
+        setupPratyakshaROIEvents();
+        
+        // Setup mouse tracking for tooltips
+        setupPratyakshaTooltip();
+        
+        // Setup canvas click for ROI selection
+        pratyakshaViewer.addHandler('canvas-click', event => {
+          if (pratyakshaRoiMode) return;
+          const imgPt = pratyakshaViewerPixelToImage(event.position);
+          
+          let clickedOnRoi = false;
+          for (let i = pratyakshaRois.length - 1; i >= 0; i--) {
+            if (pratyakshaPointInPolygon(imgPt, pratyakshaRois[i].vertices)) {
+              pratyakshaRois[i].selected = !pratyakshaRois[i].selected;
+              clickedOnRoi = true;
+              break;
+            }
+          }
+          if (!clickedOnRoi) pratyakshaRois.forEach(r => r.selected = false);
+          refreshPratyakshaROIDropdowns();
+          drawAllPratyakshaROIs();
+        });
+      }
+      
+      function syncPratyakshaCanvases() {
+        if (!pratyakshaViewer) return;
+        const { clientWidth: w, clientHeight: h } = pratyakshaViewer.container;
+        const overlayCanvas = document.getElementById('pratyaksha-overlay');
+        const roiCanvas = document.getElementById('pratyaksha-roi-canvas');
+        
+        [overlayCanvas, roiCanvas].forEach(canvas => {
+          if (canvas) {
+            canvas.width = w;
+            canvas.height = h;
+            canvas.style.width = `${w}px`;
+            canvas.style.height = `${h}px`;
+          }
+        });
+      }
+      
+      function pratyakshaViewerPixelToImage(viewerPixel) {
+        const viewportPoint = pratyakshaViewer.viewport.viewerElementToViewportCoordinates(
+          new OpenSeadragon.Point(viewerPixel.x, viewerPixel.y)
+        );
+        return pratyakshaViewer.viewport.viewportToImageCoordinates(viewportPoint);
+      }
+      
+      function pratyakshaImageToScreen(imagePoint) {
+        const vp = pratyakshaViewer.viewport.imageToViewportCoordinates(
+          new OpenSeadragon.Point(imagePoint.x, imagePoint.y)
+        );
+        return pratyakshaViewer.viewport.viewportToViewerElementCoordinates(vp);
+      }
+      
+      function pratyakshaPointInPolygon(point, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          const xi = poly[i].x, yi = poly[i].y;
+          const xj = poly[j].x, yj = poly[j].y;
+          const intersect = ((yi > point.y) !== (yj > point.y)) && 
+                           (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+          if (intersect) inside = !inside;
+        }
+        return inside;
+      }
+      
+      function updatePratyakshaOverlay() {
+        if (!pratyakshaViewer || !pratyakshaViewer.isOpen() || pratyakshaBarcodes.length === 0) return;
+        
+        const overlayCanvas = document.getElementById('pratyaksha-overlay');
+        const ctx = overlayCanvas.getContext('2d');
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        
+        if (!pratyakshaOverlayVisible) return;
+        
+        const zoom = pratyakshaViewer.viewport.getZoom();
+        const spotRadius = Math.max(2, Math.min(zoom * 3, 80));
+        
+        pratyakshaBarcodes.forEach(d => {
+          const vp = pratyakshaViewer.viewport.imageToViewportCoordinates(
+            new OpenSeadragon.Point(d.x, d.y)
+          );
+          if (vp.x < 0 || vp.x > 1 || vp.y < 0 || vp.y > 1) return;
+          
+          const screenPt = pratyakshaViewer.viewport.viewportToViewerElementCoordinates(vp);
+          const isHovered = pratyakshaHoveredBarcode && pratyakshaHoveredBarcode.barcode === d.barcode;
+          const isInROI = pratyakshaRois.some(r => r.includedBarcodes?.includes(d.barcode));
+          
+          ctx.beginPath();
+          ctx.arc(screenPt.x, screenPt.y, spotRadius, 0, 2 * Math.PI);
+          
+          // High-contrast colors: Bright cyan default, orange for ROI, yellow for hover
+          ctx.fillStyle = isInROI ? "rgba(255,140,0,0.6)" : isHovered ? "rgba(255,255,0,0.9)" : "rgba(0,255,255,0.55)";
+          ctx.strokeStyle = isInROI ? "rgba(255,100,0,1)" : isHovered ? "rgba(255,220,0,1)" : "rgba(0,180,180,1)";
+          ctx.lineWidth = isHovered ? 2 : 1;
+          ctx.fill();
+          ctx.stroke();
+        });
+      }
+      
+      function drawAllPratyakshaROIs() {
+        if (!pratyakshaViewer || !pratyakshaViewer.isOpen()) return;
+        
+        const roiCanvas = document.getElementById('pratyaksha-roi-canvas');
+        const ctx = roiCanvas.getContext('2d');
+        ctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
+        
+        pratyakshaRois.forEach(r => {
+          if (!r.vertices || r.vertices.length < 2) return;
+          ctx.beginPath();
+          r.vertices.forEach((p, i) => {
+            const sp = pratyakshaImageToScreen(p);
+            if (i === 0) ctx.moveTo(sp.x, sp.y);
+            else ctx.lineTo(sp.x, sp.y);
+          });
+          ctx.closePath();
+          
+          ctx.fillStyle = r.selected ? "rgba(255, 255, 0, 0.3)" : "rgba(6,182,212,0.12)";
+          ctx.strokeStyle = r.selected ? "rgba(255, 220, 0, 1)" : "rgba(6,182,212,0.95)";
+          ctx.lineWidth = r.selected ? 3 : 2;
+          ctx.fill();
+          ctx.stroke();
+          
+          // Draw label
+          if (r.vertices.length > 0) {
+            const centroid = r.vertices.reduce((acc, p) => ({x: acc.x + p.x, y: acc.y + p.y}), {x:0, y:0});
+            centroid.x /= r.vertices.length;
+            centroid.y /= r.vertices.length;
+            const centroidScreen = pratyakshaImageToScreen(centroid);
+            ctx.fillStyle = "rgba(255,255,255,0.9)";
+            ctx.font = "bold 12px sans-serif";
+            const label = `ROI ${r.id}${r.annotation ? `: ${r.annotation}` : ''}`;
+            ctx.fillText(label, centroidScreen.x + 8, centroidScreen.y - 8);
+          }
+        });
+        
+        // Draw current path
+        if (pratyakshaIsDrawing && pratyakshaCurrentPath.length > 0) {
+          ctx.beginPath();
+          pratyakshaCurrentPath.forEach((p, i) => {
+            const sp = pratyakshaImageToScreen(p);
+            i === 0 ? ctx.moveTo(sp.x, sp.y) : ctx.lineTo(sp.x, sp.y);
+          });
+          ctx.strokeStyle = "rgba(236,72,153,0.95)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+      
+      function setupPratyakshaROIEvents() {
+        const roiCanvas = document.getElementById('pratyaksha-roi-canvas');
+        
+        roiCanvas.addEventListener("pointerdown", (ev) => {
+          if (!pratyakshaRoiMode) return;
+          pratyakshaIsDrawing = true;
+          pratyakshaCurrentPath = [];
+          try { roiCanvas.setPointerCapture(ev.pointerId); } catch (e) {}
+          
+          const rect = roiCanvas.getBoundingClientRect();
+          const screenPt = { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+          pratyakshaClickStartPoint = screenPt;
+          
+          const imgPt = pratyakshaViewerPixelToImage(screenPt);
+          pratyakshaCurrentPath.push({ x: imgPt.x, y: imgPt.y });
+          drawAllPratyakshaROIs();
+        });
+        
+        roiCanvas.addEventListener("pointermove", (ev) => {
+          if (!pratyakshaRoiMode || !pratyakshaIsDrawing) return;
+          const rect = roiCanvas.getBoundingClientRect();
+          const screenPt = { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+          
+          if (pratyakshaClickStartPoint) {
+            const dist = Math.hypot(screenPt.x - pratyakshaClickStartPoint.x, screenPt.y - pratyakshaClickStartPoint.y);
+            if (dist > 5) pratyakshaClickStartPoint = null;
+          }
+          
+          const imgPt = pratyakshaViewerPixelToImage(screenPt);
+          const last = pratyakshaCurrentPath[pratyakshaCurrentPath.length - 1];
+          if (!last || Math.hypot(last.x - imgPt.x, last.y - imgPt.y) > 5) {
+            pratyakshaCurrentPath.push({ x: imgPt.x, y: imgPt.y });
+            drawAllPratyakshaROIs();
+          }
+        });
+        
+        const endDrawing = (ev) => {
+          if (!pratyakshaRoiMode || !pratyakshaIsDrawing) return;
+          
+          if (pratyakshaClickStartPoint) {
+            // It's a click, handle selection
+            const clickImgPoint = pratyakshaCurrentPath[0];
+            if (clickImgPoint) {
+              let clickedOnRoi = false;
+              for (let i = pratyakshaRois.length - 1; i >= 0; i--) {
+                if (pratyakshaPointInPolygon(clickImgPoint, pratyakshaRois[i].vertices)) {
+                  pratyakshaRois[i].selected = !pratyakshaRois[i].selected;
+                  clickedOnRoi = true;
+                  break;
+                }
+              }
+              if (!clickedOnRoi) pratyakshaRois.forEach(r => r.selected = false);
+              refreshPratyakshaROIDropdowns();
+            }
+            pratyakshaIsDrawing = false;
+            pratyakshaCurrentPath = [];
+            drawAllPratyakshaROIs();
+          } else {
+            // It's a drag, finalize ROI
+            finalizePratyakshaROI();
+          }
+          
+          pratyakshaClickStartPoint = null;
+          try { roiCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+        };
+        
+        roiCanvas.addEventListener("pointerup", endDrawing);
+        roiCanvas.addEventListener("pointercancel", endDrawing);
+      }
+      
+      function finalizePratyakshaROI() {
+        if (!pratyakshaCurrentPath || pratyakshaCurrentPath.length < 3) {
+          pratyakshaCurrentPath = [];
+          pratyakshaIsDrawing = false;
+          drawAllPratyakshaROIs();
+          return;
+        }
+        
+        const included = pratyakshaBarcodes
+          .filter(d => pratyakshaPointInPolygon({x: d.x, y: d.y}, pratyakshaCurrentPath))
+          .map(d => d.barcode);
+        
+        pratyakshaRois.push({
+          id: pratyakshaNextRoiId++,
+          vertices: [...pratyakshaCurrentPath],
+          annotation: null,
+          includedBarcodes: included,
+          selected: false
+        });
+        
+        refreshPratyakshaROIDropdowns();
+        pratyakshaCurrentPath = [];
+        pratyakshaIsDrawing = false;
+        updatePratyakshaOverlay();
+        drawAllPratyakshaROIs();
+        
+        showToast(`ROI created with ${included.length} spots`, 'success');
+      }
+      
+      function setupPratyakshaTooltip() {
+        const tooltip = document.getElementById('pratyaksha-tooltip');
+        
+        new OpenSeadragon.MouseTracker({
+          element: pratyakshaViewer.element,
+          moveHandler: (event) => {
+            if (!pratyakshaOverlayVisible || pratyakshaRoiMode || pratyakshaBarcodes.length === 0) {
+              tooltip.style.display = "none";
+              pratyakshaHoveredBarcode = null;
+              updatePratyakshaOverlay();
+              return;
+            }
+            
+            const imgPt = pratyakshaViewerPixelToImage(event.position);
+            const zoom = pratyakshaViewer.viewport.getZoom();
+            const spotRadiusScreen = Math.max(2, Math.min(zoom * 3, 80));
+            
+            const centerViewer = new OpenSeadragon.Point(event.position.x, event.position.y);
+            const rightViewer = new OpenSeadragon.Point(event.position.x + spotRadiusScreen, event.position.y);
+            const centerViewport = pratyakshaViewer.viewport.viewerElementToViewportCoordinates(centerViewer);
+            const rightViewport = pratyakshaViewer.viewport.viewerElementToViewportCoordinates(rightViewer);
+            const centerImage = pratyakshaViewer.viewport.viewportToImageCoordinates(centerViewport);
+            const rightImage = pratyakshaViewer.viewport.viewportToImageCoordinates(rightViewport);
+            const threshold = Math.hypot(rightImage.x - centerImage.x, rightImage.y - centerImage.y) * 1.2;
+            
+            let found = null;
+            for (const barcode of pratyakshaBarcodes) {
+              const dist = Math.hypot(barcode.x - imgPt.x, barcode.y - imgPt.y);
+              if (dist <= threshold) { found = barcode; break; }
+            }
+            
+            if (found !== pratyakshaHoveredBarcode) {
+              pratyakshaHoveredBarcode = found;
+              if (found) {
+                tooltip.innerHTML = `Barcode: ${found.barcode}<br>Position: (${found.x.toFixed(1)}, ${found.y.toFixed(1)})`;
+                tooltip.style.display = "block";
+                tooltip.style.left = (event.position.x + 15) + "px";
+                tooltip.style.top = (event.position.y - 10) + "px";
+              } else {
+                tooltip.style.display = "none";
+              }
+              updatePratyakshaOverlay();
+            }
+          },
+          leaveHandler: () => {
+            pratyakshaHoveredBarcode = null;
+            tooltip.style.display = "none";
+            updatePratyakshaOverlay();
+          }
+        }).setTracking(true);
+      }
+      
+      function refreshPratyakshaROIDropdowns() {
+        const containers = [
+          document.getElementById('pratyaksha-roi-expr'),
+          document.getElementById('pratyaksha-roi-g1'),
+          document.getElementById('pratyaksha-roi-g2')
+        ];
+        
+        containers.forEach((container, idx) => {
+          if (!container) return;
+          if (pratyakshaRois.length === 0) {
+            container.innerHTML = '<span style="color: #64748b; font-style: italic;">No ROIs drawn yet</span>';
+            return;
+          }
+          
+          container.innerHTML = pratyakshaRois.map(r => `
+            <div style="display: flex; align-items: center; margin: 4px 0; font-size: 12px;">
+              <input type="checkbox" id="proi_${r.id}_${idx}" value="${r.id}" 
+                     ${r.selected ? 'checked' : ''} 
+                     style="margin-right: 8px; accent-color: #06b6d4;"
+                     onchange="pratyakshaRois.find(x=>x.id==${r.id}).selected=this.checked; drawAllPratyakshaROIs();">
+              <label for="proi_${r.id}_${idx}" style="cursor: pointer; color: #cbd5e1;">
+                ROI ${r.id}${r.annotation ? " - " + r.annotation : ""} (${r.includedBarcodes.length} spots)
+              </label>
+            </div>
+          `).join('');
+        });
+      }
+      
+      // Toggle functions
+      function togglePratyakshaROI() {
+        pratyakshaRoiMode = !pratyakshaRoiMode;
+        const roiCanvas = document.getElementById('pratyaksha-roi-canvas');
+        const btn = document.getElementById('pratyaksha-roi-btn');
+        
+        roiCanvas.style.display = pratyakshaRoiMode ? "block" : "none";
+        roiCanvas.style.pointerEvents = pratyakshaRoiMode ? "auto" : "none";
+        btn.textContent = pratyakshaRoiMode ? "ROI Tool: On" : "ROI Tool: Off";
+        btn.style.background = pratyakshaRoiMode ? "linear-gradient(135deg, #06b6d4, #0891b2)" : "rgba(255,255,255,0.95)";
+        btn.style.color = pratyakshaRoiMode ? "white" : "#1f2937";
+        
+        if (!pratyakshaRoiMode) {
+          pratyakshaIsDrawing = false;
+          pratyakshaCurrentPath = [];
+          drawAllPratyakshaROIs();
+        }
+      }
+      
+      function togglePratyakshaOverlay() {
+        pratyakshaOverlayVisible = !pratyakshaOverlayVisible;
+        const btn = document.getElementById('pratyaksha-overlay-btn');
+        btn.textContent = pratyakshaOverlayVisible ? "Hide Overlay" : "Show Overlay";
+        updatePratyakshaOverlay();
+      }
+      
+      // ROI Management
+      function deletePratyakshaROIs() {
+        const selected = pratyakshaRois.filter(r => r.selected);
+        if (selected.length === 0) {
+          showToast('No ROIs selected for deletion', 'error');
+          return;
+        }
+        if (confirm(`Delete ${selected.length} selected ROI(s)?`)) {
+          pratyakshaRois = pratyakshaRois.filter(r => !r.selected);
+          refreshPratyakshaROIDropdowns();
+          updatePratyakshaOverlay();
+          drawAllPratyakshaROIs();
+          showToast(`Deleted ${selected.length} ROI(s)`, 'success');
+        }
+      }
+      
+      function annotatePratyakshaROIs() {
+        const selected = pratyakshaRois.filter(r => r.selected);
+        if (selected.length === 0) {
+          showToast('No ROIs selected for annotation', 'error');
+          return;
+        }
+        document.getElementById('pratyaksha-annot-list').textContent = `ROIs: ${selected.map(r => r.id).join(', ')}`;
+        document.getElementById('pratyaksha-annot-text').value = selected[0].annotation || '';
+        document.getElementById('pratyaksha-annot-modal').style.display = "block";
+      }
+      
+      function savePratyakshaAnnotation() {
+        const annotation = document.getElementById('pratyaksha-annot-text').value.trim();
+        pratyakshaRois.forEach(r => { if (r.selected) r.annotation = annotation || null; });
+        refreshPratyakshaROIDropdowns();
+        drawAllPratyakshaROIs();
+        closePratyakshaAnnotation();
+        showToast('Annotation saved', 'success');
+      }
+      
+      function closePratyakshaAnnotation() {
+        document.getElementById('pratyaksha-annot-modal').style.display = "none";
+      }
+      
+      // API Calls
+      async function fetchPratyakshaExpression() {
+        const genesInput = document.getElementById('pratyaksha-gene-input').value.trim();
+        let genes = [];
+        if (genesInput) genes = genesInput.split(',').map(g => g.trim()).filter(Boolean);
+        
+        const selectedRoiIds = pratyakshaRois.filter(r => r.selected).map(r => r.id);
+        
+        let endpoint = `${API_BASE_URL}/pratyaksha/`;
+        let payload = {};
+        
+        document.getElementById('pratyaksha-results').textContent = "Fetching expression...";
+        
+        if (selectedRoiIds.length > 0) {
+          endpoint += "expression";
+          let barcodes = [];
+          selectedRoiIds.forEach(id => {
+            const roi = pratyakshaRois.find(r => r.id === id);
+            if (roi) barcodes.push(...roi.includedBarcodes);
+          });
+          payload = { genes: genes.length > 0 ? genes : ["*"], barcodes: [...new Set(barcodes)], session_id: pratyakshaSessionId };
+        } else {
+          endpoint += "expression_all";
+          payload = { genes: genes.length > 0 ? genes : ["*"], session_id: pratyakshaSessionId };
+        }
+        
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!res.ok) throw new Error(`Server returned ${res.status}`);
+          
+          const data = await res.json();
+          pratyakshaLastResults = { type: 'expression', payload: data };
+          enablePratyakshaDownloads(true, false);
+          document.getElementById('pratyaksha-results').textContent = JSON.stringify(data, null, 2).slice(0, 2000) + '...';
+          showToast('Expression data fetched!', 'success');
+        } catch (e) {
+          document.getElementById('pratyaksha-results').textContent = `Error: ${e.message}`;
+          showToast(`Failed: ${e.message}`, 'error');
+        }
+      }
+      
+      async function runPratyakshaDGE() {
+        const g1Rois = pratyakshaRois.filter(r => r.selected);
+        const vsRest = document.getElementById('pratyaksha-vs-rest').checked;
+        
+        if (g1Rois.length === 0) {
+          showToast('Please select at least one ROI for Group 1', 'error');
+          return;
+        }
+        
+        let g1Barcodes = g1Rois.flatMap(r => r.includedBarcodes);
+        const payload = { group1: [...new Set(g1Barcodes)], vs_rest: vsRest, session_id: pratyakshaSessionId };
+        
+        if (!vsRest) {
+          // For Group 2, use non-selected ROIs if any
+          const g2Rois = pratyakshaRois.filter(r => !r.selected);
+          if (g2Rois.length === 0) {
+            showToast('Please select ROIs for Group 2 or check "vs All Other Spots"', 'error');
+            return;
+          }
+          payload.group2 = [...new Set(g2Rois.flatMap(r => r.includedBarcodes))];
+        }
+        
+        document.getElementById('pratyaksha-results').textContent = "Running DGE...";
+        
+        try {
+          const res = await fetch(`${API_BASE_URL}/pratyaksha/dge`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!res.ok) throw new Error(`Server returned ${res.status}`);
+          
+          const data = await res.json();
+          pratyakshaLastResults = { type: 'dge', payload: data };
+          enablePratyakshaDownloads(true, true);
+          document.getElementById('pratyaksha-results').textContent = `Top 20 DGE results:\n${JSON.stringify(data.slice(0, 20), null, 2)}`;
+          showToast('DGE analysis complete!', 'success');
+        } catch (e) {
+          document.getElementById('pratyaksha-results').textContent = `Error: ${e.message}`;
+          showToast(`DGE failed: ${e.message}`, 'error');
+        }
+      }
+      
+      async function runPratyakshaGO() {
+        if (!pratyakshaLastResults || pratyakshaLastResults.type !== 'dge') {
+          showToast('Run DGE first to get gene list for GO enrichment', 'error');
+          return;
+        }
+        
+        const topGenes = pratyakshaLastResults.payload
+          .sort((a, b) => (a.pvals || 1) - (b.pvals || 1))
+          .slice(0, 100)
+          .map(g => g.names);
+        
+        if (topGenes.length < 3) {
+          showToast('Need at least 3 genes for GO enrichment', 'error');
+          return;
+        }
+        
+        document.getElementById('pratyaksha-results').textContent = "Running GO enrichment...";
+        
+        try {
+          const res = await fetch(`${API_BASE_URL}/pratyaksha/go_enrichment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              gene_list: topGenes,
+              organism: "Human",
+              ontology_types: ["GO_Biological_Process_2021", "GO_Molecular_Function_2021", "GO_Cellular_Component_2021"],
+              pvalue_threshold: 0.05
+            })
+          });
+          
+          if (!res.ok) throw new Error(`Server returned ${res.status}`);
+          
+          // Download CSV
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "go_enrichment_results.csv";
+          a.click();
+          window.URL.revokeObjectURL(url);
+          
+          document.getElementById('pratyaksha-results').textContent = "GO enrichment CSV downloaded!";
+          showToast('GO enrichment results downloaded!', 'success');
+        } catch (e) {
+          document.getElementById('pratyaksha-results').textContent = `Error: ${e.message}`;
+          showToast(`GO enrichment failed: ${e.message}`, 'error');
+        }
+      }
+      
+      function enablePratyakshaDownloads(json, csv) {
+        const jsonBtn = document.getElementById('pratyaksha-dl-json');
+        const csvBtn = document.getElementById('pratyaksha-dl-csv');
+        const goBtn = document.getElementById('pratyaksha-go-btn');
+        
+        jsonBtn.disabled = !json;
+        jsonBtn.style.background = json ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : '#475569';
+        jsonBtn.style.color = json ? 'white' : '#94a3b8';
+        jsonBtn.style.cursor = json ? 'pointer' : 'not-allowed';
+        
+        csvBtn.disabled = !csv;
+        csvBtn.style.background = csv ? 'linear-gradient(135deg, #10b981, #059669)' : '#475569';
+        csvBtn.style.color = csv ? 'white' : '#94a3b8';
+        csvBtn.style.cursor = csv ? 'pointer' : 'not-allowed';
+        
+        goBtn.disabled = !csv;
+        goBtn.style.background = csv ? 'linear-gradient(135deg, #06b6d4, #0891b2)' : '#475569';
+        goBtn.style.color = csv ? 'white' : '#94a3b8';
+        goBtn.style.cursor = csv ? 'pointer' : 'not-allowed';
+      }
+      
+      function downloadPratyakshaJSON() {
+        if (!pratyakshaLastResults) return;
+        const blob = new Blob([JSON.stringify(pratyakshaLastResults, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pratyaksha_${pratyakshaLastResults.type}_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      function downloadPratyakshaCSV() {
+        if (!pratyakshaLastResults || pratyakshaLastResults.type !== 'dge') return;
+        const arr = pratyakshaLastResults.payload;
+        if (!Array.isArray(arr) || arr.length === 0) return;
+        
+        const keys = Object.keys(arr[0]);
+        const csv = [keys.join(',')].concat(arr.map(r => keys.map(k => JSON.stringify(r[k] ?? '')).join(','))).join('\n');
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pratyaksha_dge_${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      function exportPratyakshaSession() {
+        const session = {
+          rois: pratyakshaRois,
+          overlayVisible: pratyakshaOverlayVisible,
+          timestamp: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(session, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pratyaksha_session_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Session exported', 'success');
+      }
+      
+      function importPratyakshaSession(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const session = JSON.parse(e.target.result);
+            if (session.rois && Array.isArray(session.rois)) {
+              pratyakshaRois = session.rois;
+              pratyakshaNextRoiId = (pratyakshaRois.reduce((m, x) => Math.max(m, x.id || 0), 0) || 0) + 1;
+              refreshPratyakshaROIDropdowns();
+              drawAllPratyakshaROIs();
+              updatePratyakshaOverlay();
+            }
+            if (typeof session.overlayVisible === 'boolean') {
+              pratyakshaOverlayVisible = session.overlayVisible;
+              document.getElementById('pratyaksha-overlay-btn').textContent = pratyakshaOverlayVisible ? "Hide Overlay" : "Show Overlay";
+              updatePratyakshaOverlay();
+            }
+            showToast('Session imported successfully', 'success');
+          } catch (err) {
+            showToast('Failed to import session', 'error');
+          }
+        };
+        reader.readAsText(file);
+      }
+      
+      // Make Pratyaksha functions global
+      window.togglePratyakshaROI = togglePratyakshaROI;
+      window.togglePratyakshaOverlay = togglePratyakshaOverlay;
+      window.deletePratyakshaROIs = deletePratyakshaROIs;
+      window.annotatePratyakshaROIs = annotatePratyakshaROIs;
+      window.savePratyakshaAnnotation = savePratyakshaAnnotation;
+      window.closePratyakshaAnnotation = closePratyakshaAnnotation;
+      window.fetchPratyakshaExpression = fetchPratyakshaExpression;
+      window.runPratyakshaDGE = runPratyakshaDGE;
+      window.runPratyakshaGO = runPratyakshaGO;
+      window.downloadPratyakshaJSON = downloadPratyakshaJSON;
+      window.downloadPratyakshaCSV = downloadPratyakshaCSV;
+      window.exportPratyakshaSession = exportPratyakshaSession;
+      window.importPratyakshaSession = importPratyakshaSession;
     </script>
   </body>
 </html>
