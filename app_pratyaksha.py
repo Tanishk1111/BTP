@@ -130,6 +130,19 @@ def get_adata(h5_path: Path = None, session_id: str = None):
         try:
             adata = sc.read_10x_h5(str(h5_path))
             adata.var_names_make_unique()
+            
+            
+            # 1. SAVE THE RAW COUNTS (Critical for DGE)
+            # This stores the integers in adata.raw before you mangle them with logs
+            adata.raw = adata.copy()
+
+            # 2. Filter genes expressed in at least 3 cells
+            sc.pp.filter_genes(adata, min_cells=3)
+            
+            # 3. Normalize for visualization (This affects adata.X)
+            sc.pp.normalize_total(adata, target_sum=1e4)
+            sc.pp.log1p(adata)
+            
             _adata_cache[key] = adata
             print(f"✅ Pratyaksha: Loaded {adata.n_obs} barcodes, {adata.n_vars} genes from {h5_path.name}")
         except Exception as e:
@@ -479,101 +492,80 @@ def get_expression_all(request: ExpressionAllRequest):
 
 @router.post("/dge")
 def differential_expression(req: DGERequest):
-    """Perform differential gene expression analysis."""
+    """Perform differential gene expression analysis using optimized memory and raw counts."""
     try:
         adata = get_adata(session_id=req.session_id)
         
-        # Validate barcodes
-        g1 = [bc for bc in req.group1 if bc in adata.obs_names]
-        g2 = []
-        if req.group2:
-            g2 = [bc for bc in req.group2 if bc in adata.obs_names]
-
-        if len(g1) == 0:
+        # 1. Validate barcodes
+        g1_indices = adata.obs_names.isin(req.group1)
+        if not any(g1_indices):
             raise HTTPException(status_code=400, detail="No valid barcodes in group1")
 
-        # Create a copy of adata for this analysis
-        adata_copy = adata.copy()
+        # Create a unique temporary column name to avoid multi-user collisions
+        comparison_col = f"_temp_comp_{uuid.uuid4().hex[:6]}"
+        
+        try:
+            # 2. Tag the groups in the main object (Memory efficient)
+            adata.obs[comparison_col] = "other"
+            adata.obs.loc[g1_indices, comparison_col] = "group1"
 
-        # Case 1: group1 vs rest
-        if req.vs_rest:
-            adata_copy.obs["comparison"] = "rest"
-            adata_copy.obs.loc[g1, "comparison"] = "group1"
+            if req.vs_rest:
+                reference = "other"
+            else:
+                g2_indices = adata.obs_names.isin(req.group2)
+                if not any(g2_indices):
+                    raise HTTPException(status_code=400, detail="Group 2 is empty and vs_rest is False")
+                adata.obs.loc[g2_indices, comparison_col] = "group2"
+                reference = "group2"
 
-            group_counts = adata_copy.obs["comparison"].value_counts()
-            if group_counts.min() >= 2:
-                try:
-                    sc.tl.rank_genes_groups(
-                        adata_copy,
-                        groupby="comparison",
-                        groups=["group1"],
-                        reference="rest",
-                        method="wilcoxon"
-                    )
-                    result = sc.get.rank_genes_groups_df(adata_copy, group="group1")
-                    result = sanitize_results(result)
-                    return result.to_dict(orient="records")
-                except Exception as e:
-                    print(f"Wilcoxon test failed, falling back to fold change: {e}")
+            # 3. Perform the test using .raw counts
+            # sc.tl.rank_genes_groups is optimized for this
+            sc.tl.rank_genes_groups(
+                adata,
+                groupby=comparison_col,
+                groups=["group1"],
+                reference=reference,
+                method="wilcoxon",
+                use_raw=True  # CRITICAL: Uses the raw counts we saved in get_adata
+            )
 
-            # Fallback: mean-based log2FC
-            rest_barcodes = [bc for bc in adata_copy.obs_names if bc not in g1]
-            exp1 = np.asarray(adata_copy[g1].X.mean(axis=0)).flatten()
-            exp2 = np.asarray(adata_copy[rest_barcodes].X.mean(axis=0)).flatten()
-            genes = adata_copy.var_names
-            fold_change = np.log2((exp1 + 1) / (exp2 + 1))
+            # 4. Extract and sanitize results
+            result = sc.get.rank_genes_groups_df(adata, group="group1")
+            
+            # Clean up the temporary column immediately
+            del adata.obs[comparison_col]
+            
+            return sanitize_results(result).to_dict(orient="records")
+
+        except Exception as e:
+            # Emergency cleanup of the temp column if Scanpy fails
+            if comparison_col in adata.obs:
+                del adata.obs[comparison_col]
+            
+            print(f"⚠️ DGE Statistical test failed: {e}. Falling back to basic Log2FC.")
+            
+            # 5. Robust Fallback (Manual Mean Calculation)
+            # Use adata.X (normalized) for the mean-based fallback calculation
+            mask1 = adata.obs_names.isin(req.group1)
+            if req.vs_rest:
+                mask2 = ~mask1
+            else:
+                mask2 = adata.obs_names.isin(req.group2)
+
+            # Calculate means (handles sparse matrices safely)
+            exp1 = np.asarray(adata[mask1, :].X.mean(axis=0)).flatten()
+            exp2 = np.asarray(adata[mask2, :].X.mean(axis=0)).flatten()
+            
+            # Log2 Fold Change (using 1e-9 to avoid log(0))
+            fold_change = exp1 - exp2
+            
             df = pd.DataFrame({
-                "names": genes, 
-                "group1_mean": exp1, 
-                "rest_mean": exp2, 
+                "names": adata.var_names,
                 "logfoldchanges": fold_change,
-                "pvals": [1.0] * len(genes),
-                "pvals_adj": [1.0] * len(genes)
+                "pvals": [1.0] * len(adata.var_names),
+                "pvals_adj": [1.0] * len(adata.var_names)
             })
-            df = sanitize_results(df)
-            return df.sort_values('logfoldchanges', ascending=False).to_dict(orient="records")
-
-        # Case 2: group1 vs group2
-        if len(g2) == 0:
-            raise HTTPException(status_code=400, detail="Group 2 is empty and vs_rest is False")
-
-        adata_copy.obs["comparison"] = "other"
-        adata_copy.obs.loc[g1, "comparison"] = "group1"
-        adata_copy.obs.loc[g2, "comparison"] = "group2"
-
-        group_counts = adata_copy.obs["comparison"].value_counts()
-        
-        if "group1" in group_counts and "group2" in group_counts and group_counts[["group1", "group2"]].min() >= 2:
-            try:
-                sc.tl.rank_genes_groups(
-                    adata_copy,
-                    groupby="comparison",
-                    groups=["group1"],
-                    reference="group2",
-                    method="wilcoxon"
-                )
-                result = sc.get.rank_genes_groups_df(adata_copy, group="group1")
-                result = sanitize_results(result)
-                return result.to_dict(orient="records")
-            except Exception as e:
-                print(f"Wilcoxon test failed, falling back to fold change: {e}")
-
-        # Fallback: mean-based log2FC
-        exp1 = np.asarray(adata_copy[g1].X.mean(axis=0)).flatten()
-        exp2 = np.asarray(adata_copy[g2].X.mean(axis=0)).flatten()
-        genes = adata_copy.var_names
-        fold_change = np.log2((exp1 + 1) / (exp2 + 1))
-        
-        df = pd.DataFrame({
-            "names": genes,
-            "group1_mean": exp1,
-            "group2_mean": exp2,
-            "logfoldchanges": fold_change,
-            "pvals": [1.0] * len(genes),
-            "pvals_adj": [1.0] * len(genes)
-        })
-        df = sanitize_results(df)
-        return df.sort_values('logfoldchanges', ascending=False).to_dict(orient="records")
+            return sanitize_results(df).sort_values('logfoldchanges', ascending=False).to_dict(orient="records")
 
     except HTTPException:
         raise
@@ -620,6 +612,8 @@ def go_enrichment(request: GOEnrichmentRequest):
         gene_sets = [ontology_mapping.get(ont, ont) for ont in request.ontology_types]
         
         all_results = []
+        adata = get_adata()
+        detected_genes = adata.var_names.tolist()
         
         for gene_set in gene_sets:
             try:
@@ -628,6 +622,7 @@ def go_enrichment(request: GOEnrichmentRequest):
                 enr = gp.enrichr(
                     gene_list=gene_list_clean,
                     gene_sets=[gene_set],
+                    background = detected_genes,
                     organism=request.organism,
                     outdir=None,
                     cutoff=request.pvalue_threshold,
@@ -679,23 +674,89 @@ def go_enrichment(request: GOEnrichmentRequest):
                 detail="No significant enrichment terms found. Try relaxing the p-value threshold."
             )
         
-        # Generate CSV
+        # --- Generate Excel with data + plots (NEW/CHANGED) ---
+        import numpy as np  # NEW
+        import matplotlib.pyplot as plt  # NEW
+        import os  # (already available above in your env, keep to be safe)
+        import tempfile  # (already used)
+        import pandas as pd  # (already used)
+
         df_all = pd.DataFrame(all_results)
+
+        # Create temporary file for download
         temp_dir = tempfile.mkdtemp()
-        csv_path = os.path.join(temp_dir, "go_enrichment_results.csv")
-        df_all.to_csv(csv_path, index=False)
-        
-        print(f"✅ GO enrichment complete: {len(all_results)} terms found")
-        
+        xlsx_path = os.path.join(temp_dir, "go_enrichment_results.xlsx")  # CHANGED
+        images_dir = os.path.join(temp_dir, "plot_images")  # NEW
+        os.makedirs(images_dir, exist_ok=True)  # NEW
+
+        # Write data & plots to Excel
+        # Use xlsxwriter so we can embed images easily
+        with pd.ExcelWriter(xlsx_path, engine="xlsxwriter") as writer:  # NEW
+            # Results sheet
+            df_all_sorted = df_all.sort_values(["ontology", "adjusted_pvalue", "term_name"])
+            df_all_sorted.to_excel(writer, sheet_name="Results", index=False)
+
+            workbook  = writer.book
+
+            # For each ontology, make a bar plot of top terms by -log10(adj p)
+            for ont in df_all_sorted["ontology"].dropna().unique():
+                ont_df = df_all_sorted[df_all_sorted["ontology"] == ont].copy()
+                if ont_df.empty:
+                    continue
+
+                # Compute -log10 adjusted p for ranking
+                ont_df["neglog10_adj_p"] = -np.log10(ont_df["adjusted_pvalue"].replace(0, np.nextafter(0, 1)))
+                # Select top N (use provided top_terms if set, else cap at 20)
+                top_n = int(request.top_terms) if getattr(request, "top_terms", None) else 20
+                plot_df = ont_df.sort_values(["adjusted_pvalue", "term_name"]).head(top_n)
+
+                # Build barh plot (term_name vs -log10 adj p)
+                plt.figure(figsize=(10, max(4, 0.4 * len(plot_df))))  # auto height
+                y_labels = plot_df["term_name"].astype(str).tolist()
+                y_pos = np.arange(len(plot_df))[::-1]
+                plt.barh(y_pos, plot_df["neglog10_adj_p"].values)  # no explicit colors
+                plt.yticks(y_pos, y_labels)
+                plt.xlabel("-log10(Adjusted P-value)")
+                plt.title(f"GO Enrichment: {ont}")
+                plt.tight_layout()
+
+                img_path = os.path.join(images_dir, f"{ont}_barplot.png")
+                plt.savefig(img_path, dpi=200, bbox_inches="tight")
+                plt.close()
+
+                # Create sheet and insert the image near the top-left
+                sheet_name = f"Plot_{ont[:28]}"  # Excel max 31 chars
+                worksheet = workbook.add_worksheet(sheet_name)
+                # Leave a small margin; insert at cell B2
+                worksheet.insert_image("B2", img_path)
+
+                # Also dump the small table used for this plot in the same sheet (optional but handy)
+                # Put the table starting lower to avoid overlapping the figure
+                plot_df_to_show = plot_df[[
+                    "term_name", "adjusted_pvalue", "pvalue", "combined_score", "odds_ratio",
+                    "overlap", "gene_count"
+                ]].rename(columns={
+                    "term_name": "Term",
+                    "adjusted_pvalue": "Adjusted P-value",
+                    "pvalue": "P-value",
+                    "combined_score": "Combined Score",
+                    "odds_ratio": "Odds Ratio",
+                    "gene_count": "Gene Count"
+                })
+                # Write the table at, say, row 35 (zero-indexed row ~34) to avoid image
+                plot_df_to_show.to_excel(writer, sheet_name=sheet_name, index=False, startrow=34, startcol=1)
+
+        print(f"Excel file created: {xlsx_path}")
+
+        # Return as downloadable file (CHANGED)
         return FileResponse(
-            csv_path,
-            media_type="text/csv",
-            filename="go_enrichment_results.csv"
+            xlsx_path,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename="go_enrichment_results.xlsx"
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ GO enrichment error: {str(e)}")
+        print(f"GO enrichment error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"GO enrichment failed: {str(e)}")
-
