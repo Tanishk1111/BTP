@@ -59,7 +59,7 @@ def load_working_model_genes():
         sys.path.insert(0, model_dir)
         from model_genes import gene_ids
         sys.path.remove(model_dir)
-        print(f"✅ Loaded {len(gene_ids)} genes from model_genes.py")
+        print(f"[OK] Loaded {len(gene_ids)} genes from model_genes.py")
         return gene_ids
     except ImportError as e:
         print(f"Warning: Could not load model_genes.py ({e}), using fallback genes")
@@ -78,11 +78,11 @@ app = FastAPI(
     description="Professional spatial transcriptomics analysis with authentication and credits"
 )
 
-# CORS middleware - allow all origins for lab network access
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for lab network
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # Must be False when using allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -109,7 +109,7 @@ try:
     # Mount Pratyaksha tiles as static files (uses path detected by app_pratyaksha)
     if TILES_DIR.exists():
         app.mount("/pratyaksha_tiles", StaticFiles(directory=str(TILES_DIR)), name="pratyaksha_tiles")
-        print(f"✅ Pratyaksha tiles mounted from {TILES_DIR}")
+        print(f"[OK] Pratyaksha tiles mounted from {TILES_DIR}")
     else:
         # Try fallback paths for local development
         import sys
@@ -117,14 +117,14 @@ try:
             local_tiles = Path(__file__).parent / "Pratyaksha_Base_Code" / "Version_0b" / "tiles"
             if local_tiles.exists():
                 app.mount("/pratyaksha_tiles", StaticFiles(directory=str(local_tiles)), name="pratyaksha_tiles")
-                print(f"✅ Pratyaksha tiles mounted from cloned repo: {local_tiles}")
+                print(f"[OK] Pratyaksha tiles mounted from cloned repo: {local_tiles}")
             else:
-                print(f"⚠️ Pratyaksha tiles not found. Create pratyaksha_tiles/ folder or clone the repo.")
+                print(f"[WARN] Pratyaksha tiles not found. Create pratyaksha_tiles/ folder or clone the repo.")
         else:
-            print(f"⚠️ Pratyaksha tiles directory not found: {TILES_DIR}")
-    print("✅ Pratyaksha router loaded")
+            print(f"[WARN] Pratyaksha tiles directory not found: {TILES_DIR}")
+    print("[OK] Pratyaksha router loaded")
 except ImportError as e:
-    print(f"⚠️ Pratyaksha module not available: {e}")
+    print(f"[WARN] Pratyaksha module not available: {e}")
 
 # ============================================================================
 # AUTHENTICATION UTILITIES
@@ -188,10 +188,10 @@ async def get_current_user_optional(
     db: Session = Depends(get_db)
 ):
     """Alternative auth that reads Authorization header directly"""
-    print(f"🔍 DEBUG: Authorization header received: {authorization}")
+    print(f"[DEBUG] Authorization header received: {authorization}")
     
     if not authorization:
-        print("❌ DEBUG: No authorization header found")
+        print("[ERROR] DEBUG: No authorization header found")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No authorization header",
@@ -200,10 +200,10 @@ async def get_current_user_optional(
     
     # Extract token from "Bearer <token>" format
     parts = authorization.split()
-    print(f"🔍 DEBUG: Authorization parts: {parts}")
+    print(f"[DEBUG] Authorization parts: {parts}")
     
     if len(parts) != 2 or parts[0].lower() != "bearer":
-        print(f"❌ DEBUG: Invalid format - parts count: {len(parts)}, first part: {parts[0] if parts else 'none'}")
+        print(f"[ERROR] DEBUG: Invalid format - parts count: {len(parts)}, first part: {parts[0] if parts else 'none'}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authorization header format",
@@ -211,25 +211,25 @@ async def get_current_user_optional(
         )
     
     token = parts[1]
-    print(f"🔍 DEBUG: Extracted token (first 20 chars): {token[:20]}...")
+    print(f"[DEBUG] Extracted token (first 20 chars): {token[:20]}...")
     
     try:
         username = verify_token(token)
-        print(f"✅ DEBUG: Token verified for user: {username}")
+        print(f"[OK] DEBUG: Token verified for user: {username}")
     except Exception as e:
-        print(f"❌ DEBUG: Token verification failed: {e}")
+        print(f"[ERROR] DEBUG: Token verification failed: {e}")
         raise
     
     user = db.query(User).filter(User.username == username).first()
     if user is None:
-        print(f"❌ DEBUG: User {username} not found in database")
+        print(f"[ERROR] DEBUG: User {username} not found in database")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    print(f"✅ DEBUG: User authenticated: {user.username} (ID: {user.id})")
+    print(f"[OK] DEBUG: User authenticated: {user.username} (ID: {user.id})")
     return user
 
 def consume_credits(db: Session, user: User, operation: str, description: str = None):
@@ -874,7 +874,7 @@ async def predict_genes(
             if (gene_idx + 1) % 10 == 0:
                 print(f"  Generated {gene_idx + 1}/{len(genes_to_use)} heatmaps + overlays + contours...")
         
-        print(f"✅ Generated {len(heatmap_files)//3} heatmaps + {len(heatmap_files)//3} overlays + {len(heatmap_files)//3} contours for selected genes")
+        print(f"[OK] Generated {len(heatmap_files)//3} heatmaps + {len(heatmap_files)//3} overlays + {len(heatmap_files)//3} contours for selected genes")
         
         # Prepare gene metadata for selected genes
         gene_metadata = {}
@@ -925,7 +925,7 @@ if __name__ == "__main__":
     print(f"User models directory: {USER_MODELS_DIR}")
     print("🔐 Authentication: ENABLED")
     print("💰 Credits system: ENABLED") 
-    print("🛡️  Model protection: ENABLED")
+    print("[SECURITY] Model protection: ENABLED")
     print("🎓 Training portal: ENABLED")
     print("Server will start on http://localhost:9001")
     print("API docs available at http://localhost:9001/docs")

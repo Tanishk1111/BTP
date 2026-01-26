@@ -123,6 +123,27 @@
         animation: slide-up 0.8s ease-out forwards;
       }
 
+      /* Progress bar shimmer animation */
+      @keyframes shimmer {
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
+        }
+      }
+
+      .progress-bar-animated {
+        background: linear-gradient(
+          90deg,
+          #14b8a6 0%,
+          #06b6d4 50%,
+          #14b8a6 100%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 2s linear infinite;
+      }
+
       /* Button styles */
       .button {
         display: inline-flex;
@@ -2031,7 +2052,7 @@
                   </div>
                 </div>
                 <div class="mt-4 bg-white rounded-full h-2 overflow-hidden">
-                  <div id="pratyaksha-processing-bar" class="bg-gradient-to-r from-teal-500 to-cyan-500 h-full transition-all duration-300" style="width: 0%"></div>
+                  <div id="pratyaksha-processing-bar" class="progress-bar-animated h-full transition-all duration-300" style="width: 0%"></div>
                 </div>
               </div>
 
@@ -2136,8 +2157,8 @@
                 <span style="color: #64748b; font-style: italic;">No ROIs drawn yet</span>
               </div>
               <p style="font-size: 11px; color: #64748b; font-style: italic; margin-bottom: 8px;">Leave all ROIs unchecked to analyze all barcodes</p>
-              <button onclick="fetchPratyakshaExpression()" style="width: 100%; padding: 8px 14px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-                <i class="fas fa-database mr-2"></i>Fetch Expression Data
+              <button id="pratyaksha-fetch-expr-btn" onclick="fetchPratyakshaExpression()" style="width: 100%; padding: 8px 14px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;">
+                <i class="fas fa-database mr-2"></i><span>Fetch Expression Data</span>
               </button>
             </div>
             
@@ -2145,6 +2166,7 @@
             <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #334155;">
               <h4 style="margin: 0 0 12px 0; color: #e2e8f0; font-size: 14px; font-weight: 600;">
                 <i class="fas fa-balance-scale mr-2 text-pink-400"></i>Differential Gene Expression
+                <span style="font-size: 10px; font-weight: normal; color: #64748b; margin-left: 8px;">(RC Normalized)</span>
               </h4>
               <label style="display: block; margin: 8px 0 4px 0; font-size: 12px; color: #94a3b8; font-weight: 500;">Group 1 ROIs:</label>
               <div id="pratyaksha-roi-g1" style="max-height: 80px; overflow-y: auto; border: 1px solid #475569; padding: 8px; background: #0f172a; border-radius: 6px; margin-bottom: 8px; color: #cbd5e1; font-size: 12px;">
@@ -2155,10 +2177,10 @@
                 <span style="color: #64748b; font-style: italic;">No ROIs drawn yet</span>
               </div>
               <label style="display: flex; align-items: center; margin: 8px 0; font-size: 12px; color: #94a3b8; font-weight: 500; cursor: pointer;">
-                <input type="checkbox" id="pratyaksha-vs-rest" style="margin-right: 8px;"> Compare Group 1 vs All Other Spots
+                <input type="checkbox" id="pratyaksha-vs-rest" style="margin-right: 8px;"> Compare Group 1 vs All Spots
               </label>
-              <button onclick="runPratyakshaDGE()" style="width: 100%; padding: 8px 14px; background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-                <i class="fas fa-chart-line mr-2"></i>Run Differential Expression
+              <button id="pratyaksha-dge-btn" onclick="runPratyakshaDGE()" style="width: 100%; padding: 8px 14px; background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;">
+                <i class="fas fa-chart-line mr-2"></i><span>Run Differential Expression</span>
               </button>
             </div>
             
@@ -3786,10 +3808,77 @@ No results yet. Use the tools above to analyze your spatial data.
         processingDiv.classList.remove('hidden');
         processBtn.disabled = true;
         
+        // Dynamic progress simulation state
+        let currentProgress = 0;
+        let simulationInterval = null;
+        let processingPhase = 'upload'; // 'upload', 'tiles', 'finalizing'
+        
+        // Processing status messages that rotate during tile generation
+        const processingMessages = [
+          'Generating image tiles...',
+          'Processing zoom levels...',
+          'Creating tile pyramid...',
+          'Optimizing for deep zoom...',
+          'Building spatial index...',
+          'Almost there, generating final tiles...',
+          'Processing large image regions...',
+          'Compressing tile data...'
+        ];
+        let messageIndex = 0;
+        
+        // Function to update progress smoothly
+        function updateProgress(target, duration = 500) {
+          const start = currentProgress;
+          const diff = target - start;
+          const startTime = performance.now();
+          
+          function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease out cubic for smooth deceleration
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            currentProgress = start + diff * easeOut;
+            progressBar.style.width = `${currentProgress}%`;
+            
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            }
+          }
+          requestAnimationFrame(animate);
+        }
+        
+        // Function to simulate gradual progress during long operations
+        function startProgressSimulation(minProgress, maxProgress, baseInterval = 800) {
+          let targetProgress = minProgress;
+          
+          simulationInterval = setInterval(() => {
+            if (targetProgress < maxProgress) {
+              // Slow down as we approach max (asymptotic approach)
+              const remaining = maxProgress - targetProgress;
+              const increment = Math.max(0.3, remaining * 0.08); // Slower as we get closer
+              targetProgress = Math.min(targetProgress + increment, maxProgress);
+              updateProgress(targetProgress, baseInterval * 0.8);
+              
+              // Rotate status messages during tile generation
+              if (processingPhase === 'tiles') {
+                messageIndex = (messageIndex + 1) % processingMessages.length;
+                statusText.textContent = processingMessages[messageIndex];
+              }
+            }
+          }, baseInterval + Math.random() * 400); // Add some randomness for natural feel
+        }
+        
+        function stopProgressSimulation() {
+          if (simulationInterval) {
+            clearInterval(simulationInterval);
+            simulationInterval = null;
+          }
+        }
+        
         try {
-          // Step 1: Upload image
+          // Phase 1: Upload (0-30%)
+          processingPhase = 'upload';
           statusText.textContent = 'Uploading tissue image...';
-          progressBar.style.width = '20%';
           
           const formData = new FormData();
           formData.append('image', pratyakshaUploadedImage);
@@ -3798,27 +3887,60 @@ No results yet. Use the tools above to analyze your spatial data.
             formData.append('expression_h5', pratyakshaUploadedH5);
           }
           
-          const response = await fetch(`${API_BASE_URL}/pratyaksha/process`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken || localStorage.getItem('authToken')}`
-            },
-            body: formData
+          // Use XMLHttpRequest for upload progress tracking
+          const uploadPromise = new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                // Upload is 0-30% of total progress
+                const uploadPercent = (e.loaded / e.total) * 30;
+                updateProgress(uploadPercent, 200);
+              }
+            });
+            
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(JSON.parse(xhr.responseText));
+              } else {
+                try {
+                  const error = JSON.parse(xhr.responseText);
+                  reject(new Error(error.detail || 'Processing failed'));
+                } catch {
+                  reject(new Error('Processing failed'));
+                }
+              }
+            });
+            
+            xhr.addEventListener('error', () => reject(new Error('Network error')));
+            xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+            
+            // When upload completes, start tile generation simulation
+            xhr.upload.addEventListener('load', () => {
+              processingPhase = 'tiles';
+              statusText.textContent = 'Generating image tiles...';
+              updateProgress(30, 300);
+              // Simulate progress from 30% to 92% during tile generation
+              setTimeout(() => startProgressSimulation(32, 92), 500);
+            });
+            
+            xhr.open('POST', `${API_BASE_URL}/pratyaksha/process`);
+            xhr.setRequestHeader('Authorization', `Bearer ${authToken || localStorage.getItem('authToken')}`);
+            xhr.send(formData);
           });
           
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Processing failed');
-          }
+          const result = await uploadPromise;
           
-          statusText.textContent = 'Generating image tiles...';
-          progressBar.style.width = '60%';
-          
-          const result = await response.json();
-          
+          // Phase 3: Finalizing (92-100%)
+          stopProgressSimulation();
+          processingPhase = 'finalizing';
           statusText.textContent = 'Finalizing...';
-          progressBar.style.width = '100%';
+          updateProgress(95, 200);
           
+          await new Promise(r => setTimeout(r, 300));
+          updateProgress(100, 300);
+          
+          await new Promise(r => setTimeout(r, 400));
           showToast('Data processed successfully!', 'success');
           
           // Store the session info and launch viewer
@@ -3828,6 +3950,7 @@ No results yet. Use the tools above to analyze your spatial data.
           }, 500);
           
         } catch (error) {
+          stopProgressSimulation();
           console.error('Processing error:', error);
           showToast(`Processing failed: ${error.message}`, 'error');
           processingDiv.classList.add('hidden');
@@ -3865,6 +3988,12 @@ No results yet. Use the tools above to analyze your spatial data.
       let pratyakshaSessionId = null;  // For user-uploaded data
       let pratyakshaClickStartPoint = null;
       
+      // Helper to truncate results to 2000 chars
+      function truncateResults(text, maxLen = 2000) {
+        if (text.length <= maxLen) return text;
+        return text.slice(0, maxLen) + '\n\n... (truncated - download full data via JSON/CSV buttons)';
+      }
+      
       // Initialize Pratyaksha when page is shown
       function initPratyaksha() {
         if (pratyakshaViewer) return; // Already initialized
@@ -3893,6 +4022,7 @@ No results yet. Use the tools above to analyze your spatial data.
           id: "pratyaksha-viewer",
           prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
           tileSources: tileSource,
+          crossOriginPolicy: "Anonymous",
           gestureSettingsMouse: { clickToZoom: false }
         });
         
@@ -3924,8 +4054,11 @@ No results yet. Use the tools above to analyze your spatial data.
         fetch(barcodesUrl)
           .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
           .then(data => {
-            pratyakshaBarcodes = data;
-            console.log(`✅ Loaded ${pratyakshaBarcodes.length} barcodes`);
+            // Filter out invalid barcodes (x=0,y=0 or NaN values)
+            pratyakshaBarcodes = data.filter(d => 
+              d.x && d.y && d.x > 0 && d.y > 0 && !isNaN(d.x) && !isNaN(d.y)
+            );
+            console.log(`✅ Loaded ${pratyakshaBarcodes.length} valid barcodes (filtered from ${data.length})`);
             if (pratyakshaViewer.isOpen()) updatePratyakshaOverlay();
           })
           .catch(e => {
@@ -4248,17 +4381,24 @@ No results yet. Use the tools above to analyze your spatial data.
             return;
           }
           
-          container.innerHTML = pratyakshaRois.map(r => `
+          // Preserve existing checkbox states when refreshing
+          container.innerHTML = pratyakshaRois.map(r => {
+            const checkboxId = `proi_${r.id}_${idx}`;
+            const existingCheckbox = document.getElementById(checkboxId);
+            const isChecked = existingCheckbox ? existingCheckbox.checked : (idx === 0 ? r.selected : false);
+            
+            return `
             <div style="display: flex; align-items: center; margin: 4px 0; font-size: 12px;">
-              <input type="checkbox" id="proi_${r.id}_${idx}" value="${r.id}" 
-                     ${r.selected ? 'checked' : ''} 
+              <input type="checkbox" id="${checkboxId}" value="${r.id}" 
+                     ${isChecked ? 'checked' : ''} 
                      style="margin-right: 8px; accent-color: #06b6d4;"
                      onchange="pratyakshaRois.find(x=>x.id==${r.id}).selected=this.checked; drawAllPratyakshaROIs();">
-              <label for="proi_${r.id}_${idx}" style="cursor: pointer; color: #cbd5e1;">
+              <label for="${checkboxId}" style="cursor: pointer; color: #cbd5e1;">
                 ROI ${r.id}${r.annotation ? " - " + r.annotation : ""} (${r.includedBarcodes.length} spots)
               </label>
             </div>
-          `).join('');
+          `;
+          }).join('');
         });
       }
       
@@ -4330,6 +4470,9 @@ No results yet. Use the tools above to analyze your spatial data.
       
       // API Calls
       async function fetchPratyakshaExpression() {
+        const btn = document.getElementById('pratyaksha-fetch-expr-btn');
+        if (btn.disabled) return; // Prevent double-click
+        
         const genesInput = document.getElementById('pratyaksha-gene-input').value.trim();
         let genes = [];
         if (genesInput) genes = genesInput.split(',').map(g => g.trim()).filter(Boolean);
@@ -4339,7 +4482,12 @@ No results yet. Use the tools above to analyze your spatial data.
         let endpoint = `${API_BASE_URL}/pratyaksha/`;
         let payload = {};
         
-        document.getElementById('pratyaksha-results').textContent = "Fetching expression...";
+        // Set loading state
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'wait';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i><span>Fetching...</span>';
+        document.getElementById('pratyaksha-results').innerHTML = '<div style="display: flex; align-items: center; gap: 8px;"><i class="fas fa-spinner fa-spin text-purple-400"></i><span>Fetching expression data...</span></div>';
         
         if (selectedRoiIds.length > 0) {
           endpoint += "expression";
@@ -4366,17 +4514,32 @@ No results yet. Use the tools above to analyze your spatial data.
           const data = await res.json();
           pratyakshaLastResults = { type: 'expression', payload: data };
           enablePratyakshaDownloads(true, false);
-          document.getElementById('pratyaksha-results').textContent = JSON.stringify(data, null, 2).slice(0, 2000) + '...';
+          const resultText = JSON.stringify(data, null, 2);
+          document.getElementById('pratyaksha-results').textContent = truncateResults(resultText);
           showToast('Expression data fetched!', 'success');
         } catch (e) {
           document.getElementById('pratyaksha-results').textContent = `Error: ${e.message}`;
           showToast(`Failed: ${e.message}`, 'error');
+        } finally {
+          // Reset button state
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.style.cursor = 'pointer';
+          btn.innerHTML = '<i class="fas fa-database mr-2"></i><span>Fetch Expression Data</span>';
         }
       }
       
       async function runPratyakshaDGE() {
-        const g1Rois = pratyakshaRois.filter(r => r.selected);
+        const btn = document.getElementById('pratyaksha-dge-btn');
+        if (btn.disabled) return; // Prevent double-click
+        
         const vsRest = document.getElementById('pratyaksha-vs-rest').checked;
+        
+        // Read Group 1 ROIs from checkboxes (idx=1 for Group 1 dropdown)
+        const g1Rois = pratyakshaRois.filter(r => {
+          const checkbox = document.getElementById(`proi_${r.id}_1`);
+          return checkbox && checkbox.checked;
+        });
         
         if (g1Rois.length === 0) {
           showToast('Please select at least one ROI for Group 1', 'error');
@@ -4387,17 +4550,26 @@ No results yet. Use the tools above to analyze your spatial data.
         const payload = { group1: [...new Set(g1Barcodes)], vs_rest: vsRest, session_id: pratyakshaSessionId };
         
         if (!vsRest) {
-          // For Group 2, use non-selected ROIs if any
-          const g2Rois = pratyakshaRois.filter(r => !r.selected);
+          // Read Group 2 ROIs from checkboxes (idx=2 for Group 2 dropdown)
+          const g2Rois = pratyakshaRois.filter(r => {
+            const checkbox = document.getElementById(`proi_${r.id}_2`);
+            return checkbox && checkbox.checked;
+          });
+          
           if (g2Rois.length === 0) {
-            showToast('Please select ROIs for Group 2 or check "vs All Other Spots"', 'error');
+            showToast('Please select ROIs for Group 2 or check "vs All Spots"', 'error');
             return;
           }
           payload.group2 = [...new Set(g2Rois.flatMap(r => r.includedBarcodes))];
         }
         
-        document.getElementById('pratyaksha-results').textContent = "Running DGE...";
-        
+        // Set loading state
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'wait';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i><span>Running DGE...</span>';
+        document.getElementById('pratyaksha-results').innerHTML = '<div style="display: flex; align-items: center; gap: 8px;"><i class="fas fa-spinner fa-spin text-pink-400"></i><span>Running differential expression analysis (RC normalized)...</span></div>';
+        console.log(payload);
         try {
           const res = await fetch(`${API_BASE_URL}/pratyaksha/dge`, {
             method: "POST",
@@ -4410,11 +4582,18 @@ No results yet. Use the tools above to analyze your spatial data.
           const data = await res.json();
           pratyakshaLastResults = { type: 'dge', payload: data };
           enablePratyakshaDownloads(true, true);
-          document.getElementById('pratyaksha-results').textContent = `Top 20 DGE results:\n${JSON.stringify(data.slice(0, 20), null, 2)}`;
+          const resultText = `DGE Results (${data.length} genes, RC normalized):\n` + JSON.stringify(data.slice(0, 50), null, 2);
+          document.getElementById('pratyaksha-results').textContent = truncateResults(resultText);
           showToast('DGE analysis complete!', 'success');
         } catch (e) {
           document.getElementById('pratyaksha-results').textContent = `Error: ${e.message}`;
           showToast(`DGE failed: ${e.message}`, 'error');
+        } finally {
+          // Reset button state
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.style.cursor = 'pointer';
+          btn.innerHTML = '<i class="fas fa-chart-line mr-2"></i><span>Run Differential Expression</span>';
         }
       }
       
@@ -4434,37 +4613,142 @@ No results yet. Use the tools above to analyze your spatial data.
           return;
         }
         
-        document.getElementById('pratyaksha-results').textContent = "Running GO enrichment...";
+        // Create modal for GO enrichment parameters
+        const modal = document.createElement('div');
+        modal.innerHTML = `
+          <div id="goModalOverlay" style="position: fixed; top:0; left:0; width:100%; height:100%;
+                  background: rgba(0,0,0,0.7); display:flex; align-items:center;
+                  justify-content:center; z-index:9999;">
+            <div id="goModalBox" style="background: #1e293b; padding: 24px; border-radius: 12px; width: 400px;
+                    font-family: inherit; box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid #334155;">
+              <h3 style="margin: 0 0 16px 0; color: #e2e8f0; font-size: 18px;">
+                <i class="fas fa-project-diagram mr-2 text-green-400"></i>GO Enrichment Parameters
+              </h3>
+              
+              <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 4px;">Organism:</label>
+              <select id="go-organism" style="width:100%; margin-bottom:12px; padding:8px; background: #0f172a; 
+                      color: #e2e8f0; border: 1px solid #475569; border-radius: 6px;">
+                <option value="Human" selected>Human</option>
+                <option value="Mouse">Mouse</option>
+                <option value="Rat">Rat</option>
+              </select>
+              
+              <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 8px;">Ontology Types:</label>
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding: 10px; 
+                      background: #0f172a; border: 1px solid #475569; border-radius: 6px;">
+                <label style="display: flex; align-items: center; gap: 8px; color: #e2e8f0; cursor: pointer; font-size: 13px;">
+                  <input type="checkbox" id="go-ont-bp" value="GO_Biological_Process_2021" checked 
+                         style="width: 16px; height: 16px; accent-color: #22c55e;">
+                  <i class="fas fa-dna" style="color: #22c55e; width: 16px;"></i> Biological Process
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; color: #e2e8f0; cursor: pointer; font-size: 13px;">
+                  <input type="checkbox" id="go-ont-mf" value="GO_Molecular_Function_2021" checked 
+                         style="width: 16px; height: 16px; accent-color: #3b82f6;">
+                  <i class="fas fa-atom" style="color: #3b82f6; width: 16px;"></i> Molecular Function
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; color: #e2e8f0; cursor: pointer; font-size: 13px;">
+                  <input type="checkbox" id="go-ont-cc" value="GO_Cellular_Component_2021" checked 
+                         style="width: 16px; height: 16px; accent-color: #a855f7;">
+                  <i class="fas fa-cube" style="color: #a855f7; width: 16px;"></i> Cellular Component
+                </label>
+              </div>
+              
+              <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 4px;">P-value Threshold:</label>
+              <input id="go-pvalue" type="number" step="0.01" value="0.05" style="width:100%; margin-bottom:12px; 
+                     padding:8px; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box;">
+              
+              <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 4px;">Top Terms (optional):</label>
+              <input id="go-top-terms" type="number" placeholder="e.g., 20 (leave empty for all)" style="width:100%; 
+                     margin-bottom:16px; padding:8px; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box;">
+              
+              <div style="display:flex; justify-content:flex-end; gap: 10px;">
+                <button id="go-cancel-btn" style="padding: 8px 16px; background: #475569; color: #e2e8f0; 
+                        border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
+                <button id="go-submit-btn" style="padding: 8px 16px; background: #22c55e; color: white; 
+                        border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                  <i class="fas fa-play mr-1"></i>Run
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
         
-        try {
-          const res = await fetch(`${API_BASE_URL}/pratyaksha/go_enrichment`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              gene_list: topGenes,
-              organism: "Human",
-              ontology_types: ["GO_Biological_Process_2021", "GO_Molecular_Function_2021", "GO_Cellular_Component_2021"],
-              pvalue_threshold: 0.05
-            })
-          });
+        const overlay = modal.querySelector('#goModalOverlay');
+        const box = modal.querySelector('#goModalBox');
+        
+        // Prevent clicks inside from closing
+        box.addEventListener('click', e => e.stopPropagation());
+        
+        // Click outside to close
+        overlay.addEventListener('click', () => modal.remove());
+        
+        // Cancel button
+        modal.querySelector('#go-cancel-btn').onclick = () => modal.remove();
+        
+        // Submit button
+        modal.querySelector('#go-submit-btn').onclick = async () => {
+          const organism = modal.querySelector('#go-organism').value;
+          const ontology_types = [];
+          if (modal.querySelector('#go-ont-bp').checked) ontology_types.push('GO_Biological_Process_2021');
+          if (modal.querySelector('#go-ont-mf').checked) ontology_types.push('GO_Molecular_Function_2021');
+          if (modal.querySelector('#go-ont-cc').checked) ontology_types.push('GO_Cellular_Component_2021');
           
-          if (!res.ok) throw new Error(`Server returned ${res.status}`);
+          if (ontology_types.length === 0) {
+            showToast('Please select at least one ontology type', 'error');
+            return;
+          }
+          const pvalue_threshold = parseFloat(modal.querySelector('#go-pvalue').value) || 0.05;
+          const topTermsVal = modal.querySelector('#go-top-terms').value;
+          const top_terms = topTermsVal ? parseInt(topTermsVal) : null;
           
-          // Download CSV
-          const blob = await res.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "go_enrichment_results.csv";
-          a.click();
-          window.URL.revokeObjectURL(url);
+          modal.remove();
           
-          document.getElementById('pratyaksha-results').textContent = "GO enrichment CSV downloaded!";
-          showToast('GO enrichment results downloaded!', 'success');
-        } catch (e) {
-          document.getElementById('pratyaksha-results').textContent = `Error: ${e.message}`;
-          showToast(`GO enrichment failed: ${e.message}`, 'error');
-        }
+          document.getElementById('pratyaksha-results').textContent = "Running GO enrichment...";
+          
+          try {
+            const res = await fetch(`${API_BASE_URL}/pratyaksha/go_enrichment`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                gene_list: topGenes,
+                organism,
+                ontology_types,
+                pvalue_threshold,
+                top_terms,
+                session_id: pratyakshaSessionId
+              })
+            });
+            
+            if (!res.ok) {
+              let errorDetail;
+              try {
+                const errorData = await res.json();
+                errorDetail = errorData.detail || JSON.stringify(errorData);
+              } catch {
+                errorDetail = await res.text();
+              }
+              throw new Error(errorDetail);
+            }
+            
+            // Download Excel file
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "go_enrichment_results.xlsx";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            
+            document.getElementById('pratyaksha-results').textContent = "GO enrichment Excel downloaded!";
+            showToast('GO enrichment results downloaded!', 'success');
+          } catch (e) {
+            document.getElementById('pratyaksha-results').textContent = `Error: ${e.message}`;
+            showToast(`GO enrichment failed: ${e.message}`, 'error');
+          }
+        };
       }
       
       function enablePratyakshaDownloads(json, csv) {

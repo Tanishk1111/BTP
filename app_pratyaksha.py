@@ -28,7 +28,7 @@ try:
     SCANPY_AVAILABLE = True
 except ImportError:
     SCANPY_AVAILABLE = False
-    print("⚠️ scanpy not installed - Expression/DGE analysis will be disabled")
+    print("[WARN] scanpy not installed - Expression/DGE analysis will be disabled")
 
 # GO enrichment (optional - graceful fallback if not installed)
 try:
@@ -36,7 +36,12 @@ try:
     GSEAPY_AVAILABLE = True
 except ImportError:
     GSEAPY_AVAILABLE = False
-    print("⚠️ gseapy not installed - GO enrichment will be disabled")
+    print("[WARN] gseapy not installed - GO enrichment will be disabled")
+
+# Matplotlib for GO enrichment plots
+import matplotlib
+matplotlib.use("Agg")  # Non-interactive backend for server
+import matplotlib.pyplot as plt
 
 # ============================================
 # Configuration - Auto-detect Local vs Server
@@ -53,7 +58,7 @@ def detect_environment():
         cloned_tiles = base_dir / "Pratyaksha_Base_Code" / "Version_0b" / "tiles"
         if cloned_tiles.exists() and not tiles_dir.exists():
             tiles_dir = cloned_tiles
-            print(f"📍 Using tiles from cloned repo: {tiles_dir}")
+            print(f"[TILES] Using tiles from cloned repo: {tiles_dir}")
         
         return data_dir, tiles_dir, "local"
     else:
@@ -65,7 +70,7 @@ def detect_environment():
         )
 
 PRATYAKSHA_DATA_DIR, PRATYAKSHA_TILES_DIR, ENV_MODE = detect_environment()
-print(f"🔧 Pratyaksha running in {ENV_MODE} mode")
+print(f"[PRATYAKSHA] Running in {ENV_MODE} mode")
 print(f"   Data dir: {PRATYAKSHA_DATA_DIR}")
 print(f"   Tiles dir: {PRATYAKSHA_TILES_DIR}")
 
@@ -82,7 +87,7 @@ try:
     PYVIPS_AVAILABLE = True
 except ImportError:
     PYVIPS_AVAILABLE = False
-    print("⚠️ pyvips not installed - Tile generation will use fallback method")
+    print("[WARN] pyvips not installed - Tile generation will use fallback method")
 
 # ============================================
 # Router Setup
@@ -110,7 +115,7 @@ def get_adata(h5_path: Path = None, session_id: str = None):
         session_h5 = USER_SESSIONS_DIR / session_id / "expression.h5"
         if session_h5.exists():
             h5_path = session_h5
-            print(f"📂 Using session H5: {h5_path}")
+            print(f"[SESSION] Using session H5: {h5_path}")
         else:
             raise HTTPException(
                 status_code=404,
@@ -130,21 +135,8 @@ def get_adata(h5_path: Path = None, session_id: str = None):
         try:
             adata = sc.read_10x_h5(str(h5_path))
             adata.var_names_make_unique()
-            
-            
-            # 1. SAVE THE RAW COUNTS (Critical for DGE)
-            # This stores the integers in adata.raw before you mangle them with logs
-            adata.raw = adata.copy()
-
-            # 2. Filter genes expressed in at least 3 cells
-            sc.pp.filter_genes(adata, min_cells=3)
-            
-            # 3. Normalize for visualization (This affects adata.X)
-            sc.pp.normalize_total(adata, target_sum=1e4)
-            sc.pp.log1p(adata)
-            
             _adata_cache[key] = adata
-            print(f"✅ Pratyaksha: Loaded {adata.n_obs} barcodes, {adata.n_vars} genes from {h5_path.name}")
+            print(f"[OK] Pratyaksha: Loaded {adata.n_obs} barcodes, {adata.n_vars} genes from {h5_path.name}")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to load AnnData: {e}")
     
@@ -179,6 +171,7 @@ class GOEnrichmentRequest(BaseModel):
     ]
     pvalue_threshold: float = 0.05
     top_terms: Optional[int] = None
+    session_id: Optional[str] = None  # For session-based data
 
 # ============================================
 # Utility Functions
@@ -245,7 +238,7 @@ async def process_spatial_data(
         with open(image_path, "wb") as f:
             content = await image.read()
             f.write(content)
-        print(f"📷 Saved image: {image_path} ({len(content) / 1024 / 1024:.1f} MB)")
+        print(f"[IMAGE] Saved image: {image_path} ({len(content) / 1024 / 1024:.1f} MB)")
         
         # Save and process positions CSV
         positions_path = session_dir / "tissue_positions_list.csv"
@@ -255,21 +248,39 @@ async def process_spatial_data(
         # Create barcodes JSON
         barcodes_json_path = session_dir / "barcodes.json"
         try:
-            # Load tissue positions
+            # Load tissue positions - handle with or without header
             tissue_pos = pd.read_csv(positions_path, header=None)
+            
+            # Check if first row is a header (if first cell is "barcode")
+            if str(tissue_pos.iloc[0, 0]).lower() == "barcode":
+                tissue_pos = tissue_pos.iloc[1:].reset_index(drop=True)
+            
             tissue_pos.columns = ["barcode", "in_tissue", "array_row", "array_col", "pxl_row_in_fullres", "pxl_col_in_fullres"]
-            tissue_pos = tissue_pos[tissue_pos['in_tissue'] == 1]
+            
+            # Convert columns to numeric (in case they were read as strings)
+            tissue_pos["in_tissue"] = pd.to_numeric(tissue_pos["in_tissue"], errors='coerce')
+            tissue_pos["pxl_row_in_fullres"] = pd.to_numeric(tissue_pos["pxl_row_in_fullres"], errors='coerce')
+            tissue_pos["pxl_col_in_fullres"] = pd.to_numeric(tissue_pos["pxl_col_in_fullres"], errors='coerce')
+            
+            # Filter: in_tissue=1 AND valid coordinates (> 0)
+            tissue_pos = tissue_pos[
+                (tissue_pos['in_tissue'] == 1) & 
+                (tissue_pos['pxl_row_in_fullres'] > 0) & 
+                (tissue_pos['pxl_col_in_fullres'] > 0) &
+                tissue_pos['pxl_row_in_fullres'].notna() &
+                tissue_pos['pxl_col_in_fullres'].notna()
+            ]
             
             # Create barcode coordinates (using full-res pixel coordinates)
             barcode_coords = [
-                {"barcode": row["barcode"], "x": int(row["pxl_col_in_fullres"]), "y": int(row["pxl_row_in_fullres"])}
+                {"barcode": str(row["barcode"]), "x": int(row["pxl_col_in_fullres"]), "y": int(row["pxl_row_in_fullres"])}
                 for _, row in tissue_pos.iterrows()
             ]
             
             with open(barcodes_json_path, "w") as f:
                 json.dump(barcode_coords, f)
             
-            print(f"📍 Created barcodes JSON with {len(barcode_coords)} spots")
+            print(f"[SPOTS] Created barcodes JSON with {len(barcode_coords)} spots")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to process positions CSV: {e}")
         
@@ -282,9 +293,9 @@ async def process_spatial_data(
                 vips_image = pyvips.Image.new_from_file(str(image_path), access="sequential")
                 dzi_path = tiles_dir / "fullres"
                 vips_image.dzsave(str(dzi_path), tile_size=256, overlap=0, suffix=".jpg")
-                print(f"🖼️ Generated DZI tiles at {dzi_path}")
+                print(f"[DZI] Generated DZI tiles at {dzi_path}")
             except Exception as e:
-                print(f"⚠️ pyvips tile generation failed: {e}, using fallback")
+                print(f"[WARN] pyvips tile generation failed: {e}, using fallback")
                 # Fallback: just copy the image and create a simple DZI
                 create_simple_dzi(image_path, tiles_dir)
         else:
@@ -299,7 +310,7 @@ async def process_spatial_data(
             h5_path = session_dir / "expression.h5"
             with open(h5_path, "wb") as f:
                 f.write(await expression_h5.read())
-            print(f"📊 Saved expression data: {h5_path}")
+            print(f"[DATA] Saved expression data: {h5_path}")
         
         return {
             "status": "success",
@@ -349,7 +360,7 @@ def create_simple_dzi(image_path: Path, tiles_dir: Path):
         files_dir = tiles_dir / "fullres_files"
         files_dir.mkdir(exist_ok=True)
         
-        print(f"📐 Generating DZI: {width}x{height}, {num_levels} levels...")
+        print(f"[DZI] Generating DZI: {width}x{height}, {num_levels} levels...")
         
         # Generate tiles for each level (level 0 = 1x1 pixel, level N = full res)
         for level in range(num_levels):
@@ -385,10 +396,10 @@ def create_simple_dzi(image_path: Path, tiles_dir: Path):
             if level % 3 == 0 or level == num_levels - 1:  # Log progress
                 print(f"   Level {level}: {level_width}x{level_height} ({num_tiles_x}x{num_tiles_y} tiles)")
         
-        print(f"✅ Created DZI with {num_levels} levels")
+        print(f"[OK] Created DZI with {num_levels} levels")
         
     except Exception as e:
-        print(f"❌ DZI creation failed: {e}")
+        print(f"[ERROR] DZI creation failed: {e}")
         import traceback
         traceback.print_exc()
         raise
@@ -492,80 +503,152 @@ def get_expression_all(request: ExpressionAllRequest):
 
 @router.post("/dge")
 def differential_expression(req: DGERequest):
-    """Perform differential gene expression analysis using optimized memory and raw counts."""
+    """Perform differential gene expression analysis with RC normalization."""
     try:
         adata = get_adata(session_id=req.session_id)
         
-        # 1. Validate barcodes
-        g1_indices = adata.obs_names.isin(req.group1)
-        if not any(g1_indices):
+        # Validate barcodes
+        g1 = [bc for bc in req.group1 if bc in adata.obs_names]
+        g2 = []
+        if req.group2:
+            g2 = [bc for bc in req.group2 if bc in adata.obs_names]
+
+        if len(g1) == 0:
             raise HTTPException(status_code=400, detail="No valid barcodes in group1")
 
-        # Create a unique temporary column name to avoid multi-user collisions
-        comparison_col = f"_temp_comp_{uuid.uuid4().hex[:6]}"
+        # Create a copy of adata for this analysis
+        adata_copy = adata.copy()
         
-        try:
-            # 2. Tag the groups in the main object (Memory efficient)
-            adata.obs[comparison_col] = "other"
-            adata.obs.loc[g1_indices, comparison_col] = "group1"
+        # Apply RC (Relative Counts) normalization: normalize to 10,000 counts per cell
+        print("[DGE] Applying RC normalization (target_sum=10000)...")
+        sc.pp.normalize_total(adata_copy, target_sum=1e4)
+        sc.pp.log1p(adata_copy)
 
-            if req.vs_rest:
-                reference = "other"
-            else:
-                g2_indices = adata.obs_names.isin(req.group2)
-                if not any(g2_indices):
-                    raise HTTPException(status_code=400, detail="Group 2 is empty and vs_rest is False")
-                adata.obs.loc[g2_indices, comparison_col] = "group2"
-                reference = "group2"
+        # Case 1: group1 vs rest
+        if req.vs_rest:
+            adata_copy.obs["comparison"] = "rest"
+            adata_copy.obs.loc[g1, "comparison"] = "group1"
 
-            # 3. Perform the test using .raw counts
-            # sc.tl.rank_genes_groups is optimized for this
-            sc.tl.rank_genes_groups(
-                adata,
-                groupby=comparison_col,
-                groups=["group1"],
-                reference=reference,
-                method="wilcoxon",
-                use_raw=True  # CRITICAL: Uses the raw counts we saved in get_adata
-            )
+            group_counts = adata_copy.obs["comparison"].value_counts()
+            if group_counts.min() >= 2:
+                try:
+                    sc.tl.rank_genes_groups(
+                        adata_copy,
+                        groupby="comparison",
+                        groups=["group1"],
+                        reference="rest",
+                        method="wilcoxon"
+                    )
+                    result = sc.get.rank_genes_groups_df(adata_copy, group="group1")
+                    result = sanitize_results(result)
+                    return result.to_dict(orient="records")
+                except Exception as e:
+                    print(f"Wilcoxon test failed, falling back to fold change: {e}")
 
-            # 4. Extract and sanitize results
-            result = sc.get.rank_genes_groups_df(adata, group="group1")
-            
-            # Clean up the temporary column immediately
-            del adata.obs[comparison_col]
-            
-            return sanitize_results(result).to_dict(orient="records")
+            # Fallback: mean-based log2FC (data is already log-normalized)
+            rest_barcodes = [bc for bc in adata_copy.obs_names if bc not in g1]
+            exp1 = np.asarray(adata_copy[g1].X.mean(axis=0)).flatten()
+            exp2 = np.asarray(adata_copy[rest_barcodes].X.mean(axis=0)).flatten()
+            genes = adata_copy.var_names
+            # For log-normalized data: log2FC = (exp1 - exp2) / log(2)
+            fold_change = (exp1 - exp2) / np.log(2)
+            df = pd.DataFrame({
+                "names": genes, 
+                "group1_mean": exp1, 
+                "rest_mean": exp2, 
+                "logfoldchanges": fold_change,
+                "pvals": [1.0] * len(genes),
+                "pvals_adj": [1.0] * len(genes)
+            })
+            df = sanitize_results(df)
+            return df.sort_values('logfoldchanges', ascending=False).to_dict(orient="records")
 
-        except Exception as e:
-            # Emergency cleanup of the temp column if Scanpy fails
-            if comparison_col in adata.obs:
-                del adata.obs[comparison_col]
-            
-            print(f"⚠️ DGE Statistical test failed: {e}. Falling back to basic Log2FC.")
-            
-            # 5. Robust Fallback (Manual Mean Calculation)
-            # Use adata.X (normalized) for the mean-based fallback calculation
-            mask1 = adata.obs_names.isin(req.group1)
-            if req.vs_rest:
-                mask2 = ~mask1
-            else:
-                mask2 = adata.obs_names.isin(req.group2)
+        # Case 2: group1 vs group2
+        if len(g2) == 0:
+            raise HTTPException(status_code=400, detail="Group 2 is empty and vs_rest is False")
 
-            # Calculate means (handles sparse matrices safely)
-            exp1 = np.asarray(adata[mask1, :].X.mean(axis=0)).flatten()
-            exp2 = np.asarray(adata[mask2, :].X.mean(axis=0)).flatten()
-            
-            # Log2 Fold Change (using 1e-9 to avoid log(0))
-            fold_change = exp1 - exp2
+        # Check for overlap between groups
+        g1_set = set(g1)
+        g2_set = set(g2)
+        overlap = g1_set & g2_set
+        
+        # Handle identical groups: comparing a group to itself gives fold_change=0, pval=1
+        if g1_set == g2_set:
+            print(f"[DGE] Groups are identical ({len(g1)} barcodes) - returning fold_change=0, pval=1")
+            exp1 = np.asarray(adata_copy[g1].X.mean(axis=0)).flatten()
+            genes = adata_copy.var_names
+            df = pd.DataFrame({
+                "names": genes,
+                "group1_mean": exp1,
+                "group2_mean": exp1,
+                "logfoldchanges": [0.0] * len(genes),
+                "pvals": [1.0] * len(genes),
+                "pvals_adj": [1.0] * len(genes)
+            })
+            df = sanitize_results(df)
+            return df.sort_values('logfoldchanges', ascending=False).to_dict(orient="records")
+
+        # If groups overlap but aren't identical, use fold-change calculation
+        # (Wilcoxon can't handle overlapping groups properly due to cell labeling)
+        if len(overlap) > 0:
+            print(f"[DGE] Groups have {len(overlap)} overlapping barcodes - using fold-change (no exclusion)")
+            # Use ALL barcodes from each group (including overlap)
+            exp1 = np.asarray(adata_copy[g1].X.mean(axis=0)).flatten()
+            exp2 = np.asarray(adata_copy[g2].X.mean(axis=0)).flatten()
+            genes = adata_copy.var_names
+            fold_change = (exp1 - exp2) / np.log(2)
             
             df = pd.DataFrame({
-                "names": adata.var_names,
+                "names": genes,
+                "group1_mean": exp1,
+                "group2_mean": exp2,
                 "logfoldchanges": fold_change,
-                "pvals": [1.0] * len(adata.var_names),
-                "pvals_adj": [1.0] * len(adata.var_names)
+                "pvals": [1.0] * len(genes),  # Can't compute p-values with overlap
+                "pvals_adj": [1.0] * len(genes)
             })
-            return sanitize_results(df).sort_values('logfoldchanges', ascending=False).to_dict(orient="records")
+            df = sanitize_results(df)
+            return df.sort_values('logfoldchanges', ascending=False).to_dict(orient="records")
+
+        # No overlap - can use Wilcoxon test
+        # Mark cells as group1, group2, or other
+        adata_copy.obs["comparison"] = "other"
+        adata_copy.obs.loc[g1, "comparison"] = "group1"
+        adata_copy.obs.loc[g2, "comparison"] = "group2"
+
+        # Check if we have enough cells for statistical test
+        group_counts = adata_copy.obs["comparison"].value_counts()
+        
+        if "group1" in group_counts and "group2" in group_counts and group_counts[["group1", "group2"]].min() >= 2:
+            try:
+                sc.tl.rank_genes_groups(
+                    adata_copy,
+                    groupby="comparison",
+                    groups=["group1"],
+                    reference="group2",
+                    method="wilcoxon"
+                )
+                result = sc.get.rank_genes_groups_df(adata_copy, group="group1")
+                result = sanitize_results(result)
+                return result.to_dict(orient="records")
+            except Exception as e:
+                print(f"Wilcoxon test failed, falling back to fold change: {e}")
+
+        # Fallback: mean-based log2FC (data is already log-normalized)
+        exp1 = np.asarray(adata_copy[g1].X.mean(axis=0)).flatten()
+        exp2 = np.asarray(adata_copy[g2].X.mean(axis=0)).flatten()
+        genes = adata_copy.var_names
+        fold_change = (exp1 - exp2) / np.log(2)
+        
+        df = pd.DataFrame({
+            "names": genes,
+            "group1_mean": exp1,
+            "group2_mean": exp2,
+            "logfoldchanges": fold_change,
+            "pvals": [1.0] * len(genes),
+            "pvals_adj": [1.0] * len(genes)
+        })
+        df = sanitize_results(df)
+        return df.sort_values('logfoldchanges', ascending=False).to_dict(orient="records")
 
     except HTTPException:
         raise
@@ -597,7 +680,7 @@ def go_enrichment(request: GOEnrichmentRequest):
                 detail="At least 3 genes required for meaningful enrichment analysis"
             )
         
-        print(f"🧬 Running GO enrichment for {len(gene_list_clean)} genes...")
+        print(f"[GO] Running GO enrichment for {len(gene_list_clean)} genes...")
         
         # Map ontology names
         ontology_mapping = {
@@ -612,8 +695,6 @@ def go_enrichment(request: GOEnrichmentRequest):
         gene_sets = [ontology_mapping.get(ont, ont) for ont in request.ontology_types]
         
         all_results = []
-        adata = get_adata()
-        detected_genes = adata.var_names.tolist()
         
         for gene_set in gene_sets:
             try:
@@ -622,7 +703,6 @@ def go_enrichment(request: GOEnrichmentRequest):
                 enr = gp.enrichr(
                     gene_list=gene_list_clean,
                     gene_sets=[gene_set],
-                    background = detected_genes,
                     organism=request.organism,
                     outdir=None,
                     cutoff=request.pvalue_threshold,
@@ -674,24 +754,17 @@ def go_enrichment(request: GOEnrichmentRequest):
                 detail="No significant enrichment terms found. Try relaxing the p-value threshold."
             )
         
-        # --- Generate Excel with data + plots (NEW/CHANGED) ---
-        import numpy as np  # NEW
-        import matplotlib.pyplot as plt  # NEW
-        import os  # (already available above in your env, keep to be safe)
-        import tempfile  # (already used)
-        import pandas as pd  # (already used)
-
+        # Generate Excel with data + plots
         df_all = pd.DataFrame(all_results)
 
         # Create temporary file for download
         temp_dir = tempfile.mkdtemp()
-        xlsx_path = os.path.join(temp_dir, "go_enrichment_results.xlsx")  # CHANGED
-        images_dir = os.path.join(temp_dir, "plot_images")  # NEW
-        os.makedirs(images_dir, exist_ok=True)  # NEW
+        xlsx_path = os.path.join(temp_dir, "go_enrichment_results.xlsx")
+        images_dir = os.path.join(temp_dir, "plot_images")
+        os.makedirs(images_dir, exist_ok=True)
 
-        # Write data & plots to Excel
-        # Use xlsxwriter so we can embed images easily
-        with pd.ExcelWriter(xlsx_path, engine="xlsxwriter") as writer:  # NEW
+        # Write data & plots to Excel using xlsxwriter to embed images
+        with pd.ExcelWriter(xlsx_path, engine="xlsxwriter") as writer:
             # Results sheet
             df_all_sorted = df_all.sort_values(["ontology", "adjusted_pvalue", "term_name"])
             df_all_sorted.to_excel(writer, sheet_name="Results", index=False)
@@ -748,7 +821,7 @@ def go_enrichment(request: GOEnrichmentRequest):
 
         print(f"Excel file created: {xlsx_path}")
 
-        # Return as downloadable file (CHANGED)
+        # Return as downloadable file
         return FileResponse(
             xlsx_path,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
