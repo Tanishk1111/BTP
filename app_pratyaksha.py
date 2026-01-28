@@ -659,7 +659,7 @@ def differential_expression(req: DGERequest):
 def go_enrichment(request: GOEnrichmentRequest):
     """
     Perform GO enrichment analysis on a list of genes using gseapy.
-    Returns a downloadable CSV file.
+    Returns JSON data grouped by ontology for frontend display.
     """
     if not GSEAPY_AVAILABLE:
         raise HTTPException(
@@ -692,9 +692,17 @@ def go_enrichment(request: GOEnrichmentRequest):
             "GO_Cellular_Component_2021": "GO_Cellular_Component_2021"
         }
         
+        # Friendly names for display
+        ontology_display_names = {
+            "GO_Biological_Process_2021": "Biological Process",
+            "GO_Molecular_Function_2021": "Molecular Function",
+            "GO_Cellular_Component_2021": "Cellular Component"
+        }
+        
         gene_sets = [ontology_mapping.get(ont, ont) for ont in request.ontology_types]
         
-        all_results = []
+        # Results grouped by ontology
+        results_by_ontology = {}
         
         for gene_set in gene_sets:
             try:
@@ -720,113 +728,52 @@ def go_enrichment(request: GOEnrichmentRequest):
                 if request.top_terms:
                     df = df.head(request.top_terms)
                 
-                ontology_type = gene_set.replace('GO_', '').replace('_2021', '').replace('_', ' ')
+                ontology_name = ontology_display_names.get(gene_set, gene_set)
                 
+                terms = []
                 for _, row in df.iterrows():
                     overlap_parts = row['Overlap'].split('/')
                     overlap_genes = int(overlap_parts[0])
                     overlap_total = int(overlap_parts[1])
+                    adj_pval = float(row['Adjusted P-value'])
                     
-                    result_entry = {
-                        "ontology": ontology_type,
-                        "term_id": row.get('Term', 'N/A'),
+                    # Compute -log10(adj_pvalue) for chart
+                    neglog10_pval = -np.log10(adj_pval) if adj_pval > 0 else 0
+                    
+                    terms.append({
                         "term_name": row['Term'],
-                        "adjusted_pvalue": float(row['Adjusted P-value']),
+                        "adjusted_pvalue": adj_pval,
+                        "neglog10_pvalue": round(neglog10_pval, 3),
                         "pvalue": float(row['P-value']) if 'P-value' in row else None,
                         "overlap": row['Overlap'],
                         "overlap_genes": overlap_genes,
                         "overlap_total": overlap_total,
-                        "odds_ratio": float(row['Odds Ratio']) if 'Odds Ratio' in row else None,
-                        "combined_score": float(row['Combined Score']) if 'Combined Score' in row else None,
+                        "odds_ratio": round(float(row['Odds Ratio']), 3) if 'Odds Ratio' in row else None,
+                        "combined_score": round(float(row['Combined Score']), 3) if 'Combined Score' in row else None,
                         "genes": row['Genes'].split(';') if isinstance(row['Genes'], str) else [],
                         "gene_count": len(row['Genes'].split(';')) if isinstance(row['Genes'], str) else 0
-                    }
-                    
-                    all_results.append(result_entry)
+                    })
+                
+                if terms:
+                    results_by_ontology[ontology_name] = terms
                 
             except Exception as e:
                 print(f"  Error processing {gene_set}: {str(e)}")
                 continue
         
-        if len(all_results) == 0:
+        if len(results_by_ontology) == 0:
             raise HTTPException(
-                status_code=200, 
+                status_code=400, 
                 detail="No significant enrichment terms found. Try relaxing the p-value threshold."
             )
         
-        # Generate Excel with data + plots
-        df_all = pd.DataFrame(all_results)
-
-        # Create temporary file for download
-        temp_dir = tempfile.mkdtemp()
-        xlsx_path = os.path.join(temp_dir, "go_enrichment_results.xlsx")
-        images_dir = os.path.join(temp_dir, "plot_images")
-        os.makedirs(images_dir, exist_ok=True)
-
-        # Write data & plots to Excel using xlsxwriter to embed images
-        with pd.ExcelWriter(xlsx_path, engine="xlsxwriter") as writer:
-            # Results sheet
-            df_all_sorted = df_all.sort_values(["ontology", "adjusted_pvalue", "term_name"])
-            df_all_sorted.to_excel(writer, sheet_name="Results", index=False)
-
-            workbook  = writer.book
-
-            # For each ontology, make a bar plot of top terms by -log10(adj p)
-            for ont in df_all_sorted["ontology"].dropna().unique():
-                ont_df = df_all_sorted[df_all_sorted["ontology"] == ont].copy()
-                if ont_df.empty:
-                    continue
-
-                # Compute -log10 adjusted p for ranking
-                ont_df["neglog10_adj_p"] = -np.log10(ont_df["adjusted_pvalue"].replace(0, np.nextafter(0, 1)))
-                # Select top N (use provided top_terms if set, else cap at 20)
-                top_n = int(request.top_terms) if getattr(request, "top_terms", None) else 20
-                plot_df = ont_df.sort_values(["adjusted_pvalue", "term_name"]).head(top_n)
-
-                # Build barh plot (term_name vs -log10 adj p)
-                plt.figure(figsize=(10, max(4, 0.4 * len(plot_df))))  # auto height
-                y_labels = plot_df["term_name"].astype(str).tolist()
-                y_pos = np.arange(len(plot_df))[::-1]
-                plt.barh(y_pos, plot_df["neglog10_adj_p"].values)  # no explicit colors
-                plt.yticks(y_pos, y_labels)
-                plt.xlabel("-log10(Adjusted P-value)")
-                plt.title(f"GO Enrichment: {ont}")
-                plt.tight_layout()
-
-                img_path = os.path.join(images_dir, f"{ont}_barplot.png")
-                plt.savefig(img_path, dpi=200, bbox_inches="tight")
-                plt.close()
-
-                # Create sheet and insert the image near the top-left
-                sheet_name = f"Plot_{ont[:28]}"  # Excel max 31 chars
-                worksheet = workbook.add_worksheet(sheet_name)
-                # Leave a small margin; insert at cell B2
-                worksheet.insert_image("B2", img_path)
-
-                # Also dump the small table used for this plot in the same sheet (optional but handy)
-                # Put the table starting lower to avoid overlapping the figure
-                plot_df_to_show = plot_df[[
-                    "term_name", "adjusted_pvalue", "pvalue", "combined_score", "odds_ratio",
-                    "overlap", "gene_count"
-                ]].rename(columns={
-                    "term_name": "Term",
-                    "adjusted_pvalue": "Adjusted P-value",
-                    "pvalue": "P-value",
-                    "combined_score": "Combined Score",
-                    "odds_ratio": "Odds Ratio",
-                    "gene_count": "Gene Count"
-                })
-                # Write the table at, say, row 35 (zero-indexed row ~34) to avoid image
-                plot_df_to_show.to_excel(writer, sheet_name=sheet_name, index=False, startrow=34, startcol=1)
-
-        print(f"Excel file created: {xlsx_path}")
-
-        # Return as downloadable file
-        return FileResponse(
-            xlsx_path,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            filename="go_enrichment_results.xlsx"
-        )
+        print(f"[GO] Returning results for {len(results_by_ontology)} ontologies")
+        
+        return {
+            "status": "success",
+            "gene_count": len(gene_list_clean),
+            "ontologies": results_by_ontology
+        }
 
     except HTTPException:
         raise
