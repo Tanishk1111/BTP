@@ -2113,6 +2113,20 @@
               <button id="pratyaksha-overlay-btn" onclick="togglePratyakshaOverlay()" style="padding: 8px 12px; background: rgba(255,255,255,0.95); border: 1px solid #4b5563; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1f2937; transition: all 0.12s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 Hide Overlay
               </button>
+              <button id="annotation-toggle-btn" onclick="toggleAnnotationOverlay()" disabled style="padding: 8px 12px; background: linear-gradient(135deg, #475569, #334155); border: none; border-radius: 6px; cursor: not-allowed; font-size: 13px; font-weight: 600; color: white; opacity: 0.5; transition: all 0.12s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                <i class="fas fa-eye mr-2"></i>Show Annotations
+              </button>
+            </div>
+            
+            <!-- Annotation Legend (floating) -->
+            <div id="annotation-legend" style="position: absolute; bottom: 20px; left: 20px; z-index: 40; display: none; background: rgba(15, 23, 42, 0.95); padding: 12px 16px; border-radius: 10px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-height: 300px; overflow-y: auto; min-width: 150px;">
+              <!-- Legend content will be populated dynamically -->
+            </div>
+            
+            <!-- Annotation Status Badge -->
+            <div id="annotation-status" style="position: absolute; bottom: 20px; right: 360px; z-index: 40; background: rgba(15, 23, 42, 0.95); padding: 8px 14px; border-radius: 8px; border: 1px solid #334155; font-size: 12px; color: #94a3b8; display: none;">
+              <i class="fas fa-circle" style="color: #64748b;"></i>
+              <span style="margin-left: 6px;">Annotation status</span>
             </div>
             
             <!-- Loading indicator -->
@@ -2214,6 +2228,63 @@
                   <i class="fas fa-project-diagram mr-2"></i>Run GO Enrichment
                   <span style="font-size: 10px; margin-left: 8px;">(Run DGE first)</span>
                 </button>
+              </div>
+            </div>
+            
+            <!-- Collapsible: Gene Set Variation Analysis -->
+            <div class="pratyaksha-accordion" style="margin-bottom: 12px; border: 1px solid #475569; border-radius: 8px; overflow: hidden;">
+              <div onclick="toggleAccordion('gsva-panel')" style="padding: 12px 14px; background: linear-gradient(135deg, #f59e0b, #d97706); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                <span style="color: white; font-size: 13px; font-weight: 600;">
+                  <i class="fas fa-fire mr-2"></i>Gene Set Variation
+                </span>
+                <i class="fas fa-chevron-down accordion-arrow" id="gsva-panel-arrow" style="color: white; transition: transform 0.3s;"></i>
+              </div>
+              <div id="gsva-panel" class="accordion-content" style="display: none; padding: 14px; background: #1e293b;">
+                <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+                  <i class="fas fa-info-circle mr-2" style="color: #f59e0b;"></i>
+                  Score spots for pathway activity. Select one or more gene sets:
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+                  <label style="display: flex; align-items: center; font-size: 13px; color: #e2e8f0; cursor: pointer; padding: 8px 10px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
+                    <input type="checkbox" id="gsva-hypoxia" checked style="margin-right: 10px;">
+                    <i class="fas fa-lungs" style="color: #dc2626; width: 18px; margin-right: 8px;"></i>
+                    <span>Hypoxia</span>
+                  </label>
+                  <label style="display: flex; align-items: center; font-size: 13px; color: #e2e8f0; cursor: pointer; padding: 8px 10px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
+                    <input type="checkbox" id="gsva-emt" checked style="margin-right: 10px;">
+                    <i class="fas fa-exchange-alt" style="color: #d97706; width: 18px; margin-right: 8px;"></i>
+                    <span>EMT</span>
+                  </label>
+                  <label style="display: flex; align-items: center; font-size: 13px; color: #e2e8f0; cursor: pointer; padding: 8px 10px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
+                    <input type="checkbox" id="gsva-angiogenesis" checked style="margin-right: 10px;">
+                    <i class="fas fa-heartbeat" style="color: #e11d48; width: 18px; margin-right: 8px;"></i>
+                    <span>Angiogenesis</span>
+                  </label>
+                </div>
+                
+                <!-- GSVA Result Selector (hidden until results available) -->
+                <div id="gsva-overlay-selector" style="display: none; margin-bottom: 12px;">
+                  <label style="display: block; font-size: 12px; color: #94a3b8; font-weight: 500; margin-bottom: 6px;">Overlay on map:</label>
+                  <select id="gsva-overlay-select" onchange="applyGSVAOverlay()" style="width: 100%; padding: 8px 12px; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px; font-size: 13px; cursor: pointer;">
+                    <option value="">None (default spots)</option>
+                  </select>
+                  <div id="gsva-colorbar" style="margin-top: 8px; display: none;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; margin-bottom: 4px;">
+                      <span id="gsva-colorbar-low">Low</span>
+                      <span id="gsva-colorbar-label" style="font-weight: 600; color: #e2e8f0;">Score</span>
+                      <span id="gsva-colorbar-high">High</span>
+                    </div>
+                    <div id="gsva-colorbar-gradient" style="height: 12px; border-radius: 6px; border: 1px solid #475569;"></div>
+                  </div>
+                </div>
+                
+                <button id="gsva-run-btn" onclick="runGSVA()" style="width: 100%; padding: 10px 14px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                  <i class="fas fa-fire mr-2"></i>Run GSVA
+                </button>
+                
+                <!-- GSVA Results Summary -->
+                <div id="gsva-results-summary" style="display: none; margin-top: 12px; padding: 10px; background: #0f172a; border-radius: 6px; border: 1px solid #334155; font-size: 12px; color: #94a3b8; max-height: 120px; overflow-y: auto;">
+                </div>
               </div>
             </div>
             
@@ -3975,8 +4046,21 @@ No results yet. Expand an analysis section above to get started.
           
           // Store the session info and launch viewer
           pratyakshaSessionId = result.session_id;
+          
+          // Reset annotation state for new session
+          pratyakshaAnnotations = null;
+          pratyakshaAnnotationVisible = false;
+          pratyakshaBarcodeToAnnotation = {};
+          
           setTimeout(() => {
             showPage('pratyaksha');
+            
+            // Start annotation polling if expression data was provided
+            if (result.annotation_started || result.has_expression) {
+              const statusEl = document.getElementById('annotation-status');
+              if (statusEl) statusEl.style.display = 'block';
+              startAnnotationPolling();
+            }
           }, 500);
           
         } catch (error) {
@@ -4018,10 +4102,192 @@ No results yet. Expand an analysis section above to get started.
       let pratyakshaSessionId = null;  // For user-uploaded data
       let pratyakshaClickStartPoint = null;
       
+      // Cell Type Annotation State
+      let pratyakshaAnnotations = null;        // Full annotation data
+      let pratyakshaAnnotationVisible = false; // Toggle for annotation overlay
+      let pratyakshaAnnotationPolling = null;  // Polling interval ID
+      let pratyakshaBarcodeToAnnotation = {};  // barcode -> annotation lookup
+      
       // Helper to truncate results to 2000 chars
       function truncateResults(text, maxLen = 2000) {
         if (text.length <= maxLen) return text;
         return text.slice(0, maxLen) + '\n\n... (truncated - download full data via JSON/CSV buttons)';
+      }
+      
+      // ============================================
+      // Cell Type Annotation Functions
+      // ============================================
+      
+      // Start polling for annotation status
+      function startAnnotationPolling() {
+        if (!pratyakshaSessionId) return;
+        if (pratyakshaAnnotationPolling) clearInterval(pratyakshaAnnotationPolling);
+        
+        updateAnnotationStatusUI('pending', 'Checking annotation status...');
+        
+        // Poll every 2 seconds
+        pratyakshaAnnotationPolling = setInterval(checkAnnotationStatus, 2000);
+        // Also check immediately
+        checkAnnotationStatus();
+      }
+      
+      // Check annotation status
+      async function checkAnnotationStatus() {
+        if (!pratyakshaSessionId) return;
+        
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/pratyaksha/session/${pratyakshaSessionId}/annotation/status`,
+            { headers: { 'Authorization': `Bearer ${authToken || localStorage.getItem('authToken')}` } }
+          );
+          
+          if (!response.ok) return;
+          
+          const status = await response.json();
+          updateAnnotationStatusUI(status.status, status.message);
+          
+          if (status.status === 'complete') {
+            // Stop polling and load annotations
+            if (pratyakshaAnnotationPolling) {
+              clearInterval(pratyakshaAnnotationPolling);
+              pratyakshaAnnotationPolling = null;
+            }
+            await loadAnnotations();
+          } else if (status.status === 'error' || status.status === 'unavailable') {
+            // Stop polling on error
+            if (pratyakshaAnnotationPolling) {
+              clearInterval(pratyakshaAnnotationPolling);
+              pratyakshaAnnotationPolling = null;
+            }
+          }
+        } catch (err) {
+          console.error('Annotation status check failed:', err);
+        }
+      }
+      
+      // Load annotations from backend
+      async function loadAnnotations() {
+        if (!pratyakshaSessionId) return;
+        
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/pratyaksha/session/${pratyakshaSessionId}/annotations`,
+            { headers: { 'Authorization': `Bearer ${authToken || localStorage.getItem('authToken')}` } }
+          );
+          
+          if (!response.ok) {
+            throw new Error('Failed to load annotations');
+          }
+          
+          pratyakshaAnnotations = await response.json();
+          
+          // Build lookup map
+          pratyakshaBarcodeToAnnotation = {};
+          (pratyakshaAnnotations.annotations || []).forEach(ann => {
+            pratyakshaBarcodeToAnnotation[ann.barcode] = ann;
+          });
+          
+          // Enable the annotation toggle button
+          enableAnnotationToggle();
+          
+          // Update legend
+          updateAnnotationLegend();
+          
+          console.log(`📊 Loaded ${pratyakshaAnnotations.total_cells} cell annotations`);
+          showToast(`Cell type annotations loaded (${pratyakshaAnnotations.total_cells} cells)`, 'success');
+          
+        } catch (err) {
+          console.error('Failed to load annotations:', err);
+          showToast('Failed to load cell type annotations', 'error');
+        }
+      }
+      
+      // Update annotation status UI
+      function updateAnnotationStatusUI(status, message) {
+        const statusEl = document.getElementById('annotation-status');
+        const toggleBtn = document.getElementById('annotation-toggle-btn');
+        
+        if (!statusEl) return;
+        
+        const icons = {
+          'pending': '<i class="fas fa-clock" style="color: #eab308;"></i>',
+          'running': '<i class="fas fa-spinner fa-spin" style="color: #06b6d4;"></i>',
+          'complete': '<i class="fas fa-check-circle" style="color: #22c55e;"></i>',
+          'error': '<i class="fas fa-exclamation-circle" style="color: #ef4444;"></i>',
+          'unavailable': '<i class="fas fa-minus-circle" style="color: #64748b;"></i>',
+          'not_started': '<i class="fas fa-circle" style="color: #64748b;"></i>'
+        };
+        
+        statusEl.innerHTML = `${icons[status] || ''} <span style="margin-left: 6px;">${message || status}</span>`;
+        
+        // Enable toggle only when complete
+        if (toggleBtn) {
+          toggleBtn.disabled = status !== 'complete';
+          toggleBtn.style.opacity = status === 'complete' ? '1' : '0.5';
+        }
+      }
+      
+      // Enable annotation toggle button
+      function enableAnnotationToggle() {
+        const toggleBtn = document.getElementById('annotation-toggle-btn');
+        if (toggleBtn) {
+          toggleBtn.disabled = false;
+          toggleBtn.style.opacity = '1';
+          toggleBtn.style.cursor = 'pointer';
+        }
+      }
+      
+      // Toggle annotation overlay visibility
+      function toggleAnnotationOverlay() {
+        if (!pratyakshaAnnotations) {
+          showToast('Annotations not loaded yet', 'warning');
+          return;
+        }
+        
+        pratyakshaAnnotationVisible = !pratyakshaAnnotationVisible;
+        
+        const toggleBtn = document.getElementById('annotation-toggle-btn');
+        if (toggleBtn) {
+          toggleBtn.innerHTML = pratyakshaAnnotationVisible 
+            ? '<i class="fas fa-eye-slash mr-2"></i>Hide Annotations'
+            : '<i class="fas fa-eye mr-2"></i>Show Annotations';
+          toggleBtn.style.background = pratyakshaAnnotationVisible 
+            ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+            : 'linear-gradient(135deg, #475569, #334155)';
+        }
+        
+        // Show/hide legend
+        const legendEl = document.getElementById('annotation-legend');
+        if (legendEl) {
+          legendEl.style.display = pratyakshaAnnotationVisible ? 'block' : 'none';
+        }
+        
+        // Redraw overlay
+        updatePratyakshaOverlay();
+      }
+      
+      // Update annotation legend
+      function updateAnnotationLegend() {
+        const legendEl = document.getElementById('annotation-legend');
+        if (!legendEl || !pratyakshaAnnotations) return;
+        
+        const counts = pratyakshaAnnotations.cell_type_counts || {};
+        const colors = pratyakshaAnnotations.colors || {};
+        
+        // Sort by count
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        
+        let html = '<div style="font-size: 11px; font-weight: 600; margin-bottom: 6px; color: #e2e8f0;">Cell Types</div>';
+        sorted.forEach(([cellType, count]) => {
+          const color = colors[cellType] || '#cccccc';
+          html += `<div style="display: flex; align-items: center; margin-bottom: 4px; font-size: 11px;">
+            <span style="width: 12px; height: 12px; background: ${color}; border-radius: 50%; margin-right: 6px; flex-shrink: 0;"></span>
+            <span style="color: #cbd5e1; flex: 1;">${cellType}</span>
+            <span style="color: #64748b; margin-left: 6px;">${count}</span>
+          </div>`;
+        });
+        
+        legendEl.innerHTML = html;
       }
       
       // Initialize Pratyaksha when page is shown
@@ -4188,13 +4454,60 @@ No results yet. Expand an analysis section above to get started.
           ctx.beginPath();
           ctx.arc(screenPt.x, screenPt.y, spotRadius, 0, 2 * Math.PI);
           
-          // High-contrast colors: Bright cyan default, orange for ROI, yellow for hover
-          ctx.fillStyle = isInROI ? "rgba(255,140,0,0.6)" : isHovered ? "rgba(255,255,0,0.9)" : "rgba(0,255,255,0.55)";
-          ctx.strokeStyle = isInROI ? "rgba(255,100,0,1)" : isHovered ? "rgba(255,220,0,1)" : "rgba(0,180,180,1)";
+          // Determine fill and stroke colors
+          let fillColor, strokeColor;
+          
+          if (isHovered) {
+            fillColor = "rgba(255,255,0,0.9)";
+            strokeColor = "rgba(255,220,0,1)";
+          } else if (pratyakshaGSVAOverlay && pratyakshaGSVAResults) {
+            // GSVA heatmap overlay
+            const gs = pratyakshaGSVAResults.gene_sets[pratyakshaGSVAOverlay];
+            const score = pratyakshaGSVABarcodeScores[d.barcode];
+            
+            if (score !== undefined && gs) {
+              const range = gs.max_score - gs.min_score;
+              const t = range > 0 ? Math.max(0, Math.min(1, (score - gs.min_score) / range)) : 0.5;
+              const baseColor = interpolateColor(gs.colors.low, gs.colors.high, t);
+              fillColor = baseColor.replace('rgb(', 'rgba(').replace(')', ', 0.8)');
+              strokeColor = baseColor.replace('rgb(', 'rgba(').replace(')', ', 1)');
+            } else {
+              fillColor = "rgba(80,80,80,0.3)";
+              strokeColor = "rgba(80,80,80,0.5)";
+            }
+          } else if (pratyakshaAnnotationVisible && pratyakshaBarcodeToAnnotation[d.barcode]) {
+            // Cell type annotation overlay
+            const ann = pratyakshaBarcodeToAnnotation[d.barcode];
+            const baseColor = ann.color || '#cccccc';
+            
+            if (isInROI) {
+              fillColor = hexToRgba(baseColor, 0.8);
+              strokeColor = hexToRgba(baseColor, 1);
+            } else {
+              fillColor = hexToRgba(baseColor, 0.7);
+              strokeColor = hexToRgba(baseColor, 0.9);
+            }
+          } else {
+            // Default colors: cyan for normal, orange for ROI
+            fillColor = isInROI ? "rgba(255,140,0,0.6)" : "rgba(0,255,255,0.55)";
+            strokeColor = isInROI ? "rgba(255,100,0,1)" : "rgba(0,180,180,1)";
+          }
+          
+          ctx.fillStyle = fillColor;
+          ctx.strokeStyle = strokeColor;
           ctx.lineWidth = isHovered ? 2 : 1;
           ctx.fill();
           ctx.stroke();
         });
+      }
+      
+      // Helper to convert hex color to rgba
+      function hexToRgba(hex, alpha) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (result) {
+          return `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${alpha})`;
+        }
+        return `rgba(128, 128, 128, ${alpha})`;
       }
       
       function drawAllPratyakshaROIs() {
@@ -4379,7 +4692,27 @@ No results yet. Expand an analysis section above to get started.
             if (found !== pratyakshaHoveredBarcode) {
               pratyakshaHoveredBarcode = found;
               if (found) {
-                tooltip.innerHTML = `Barcode: ${found.barcode}<br>Position: (${found.x.toFixed(1)}, ${found.y.toFixed(1)})`;
+                let tooltipContent = `<b>Barcode:</b> ${found.barcode}<br><b>Position:</b> (${found.x.toFixed(1)}, ${found.y.toFixed(1)})`;
+                
+                // Add GSVA score if overlay active
+                if (pratyakshaGSVAOverlay && pratyakshaGSVAResults) {
+                  const score = pratyakshaGSVABarcodeScores[found.barcode];
+                  if (score !== undefined) {
+                    tooltipContent += `<br><b>${pratyakshaGSVAOverlay}:</b> ${score.toFixed(3)}`;
+                  }
+                }
+                
+                // Add cell type info if annotations are available
+                const ann = pratyakshaBarcodeToAnnotation[found.barcode];
+                if (ann) {
+                  const colorDot = `<span style="display:inline-block; width:10px; height:10px; background:${ann.color}; border-radius:50%; margin-right:6px;"></span>`;
+                  tooltipContent += `<br><b>Cell Type:</b> ${colorDot}${ann.cell_type}`;
+                  if (ann.confidence !== undefined) {
+                    tooltipContent += `<br><b>Confidence:</b> ${(ann.confidence * 100).toFixed(0)}%`;
+                  }
+                }
+                
+                tooltip.innerHTML = tooltipContent;
                 tooltip.style.display = "block";
                 tooltip.style.left = (event.position.x + 15) + "px";
                 tooltip.style.top = (event.position.y - 10) + "px";
@@ -5091,7 +5424,136 @@ No results yet. Expand an analysis section above to get started.
         }
       }
       
-      // Dropdown toggle for analysis menu
+      // ============================================
+      // Gene Set Variation Analysis (GSVA) Functions
+      // ============================================
+      let pratyakshaGSVAResults = null;    // Full GSVA results
+      let pratyakshaGSVAOverlay = null;    // Currently displayed gene set name
+      let pratyakshaGSVABarcodeScores = {}; // barcode -> score for active overlay
+      
+      async function runGSVA() {
+        const btn = document.getElementById('gsva-run-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Running GSVA...';
+        
+        // Collect selected gene sets
+        const selectedSets = [];
+        if (document.getElementById('gsva-hypoxia').checked) selectedSets.push('Hypoxia');
+        if (document.getElementById('gsva-emt').checked) selectedSets.push('EMT');
+        if (document.getElementById('gsva-angiogenesis').checked) selectedSets.push('Angiogenesis');
+        
+        if (selectedSets.length === 0) {
+          showToast('Select at least one gene set', 'warning');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-fire mr-2"></i>Run GSVA';
+          return;
+        }
+        
+        try {
+          const payload = {
+            gene_sets: selectedSets,
+            session_id: pratyakshaSessionId || null
+          };
+          
+          const response = await fetch(`${API_BASE_URL}/pratyaksha/gsva`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken || localStorage.getItem('authToken')}`
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Server returned ${response.status}`);
+          }
+          
+          pratyakshaGSVAResults = await response.json();
+          
+          // Populate overlay selector
+          const select = document.getElementById('gsva-overlay-select');
+          select.innerHTML = '<option value="">None (default spots)</option>';
+          const geneSets = Object.keys(pratyakshaGSVAResults.gene_sets);
+          geneSets.forEach(name => {
+            const gs = pratyakshaGSVAResults.gene_sets[name];
+            select.innerHTML += `<option value="${name}">${name} (${gs.n_genes_used} genes)</option>`;
+          });
+          
+          document.getElementById('gsva-overlay-selector').style.display = 'block';
+          
+          // Show summary
+          let summary = '';
+          geneSets.forEach(name => {
+            const gs = pratyakshaGSVAResults.gene_sets[name];
+            summary += `<div style="margin-bottom: 8px;">`;
+            summary += `<span style="color: #e2e8f0; font-weight: 600;">${name}</span>`;
+            summary += `<span style="color: #64748b; margin-left: 6px;">(${gs.n_genes_used}/${gs.n_genes_total} genes)</span><br>`;
+            summary += `<span style="color: #94a3b8;">Score: ${gs.min_score.toFixed(2)} to ${gs.max_score.toFixed(2)}, mean: ${gs.mean_score.toFixed(2)}</span>`;
+            summary += `</div>`;
+          });
+          
+          const summaryEl = document.getElementById('gsva-results-summary');
+          summaryEl.innerHTML = summary;
+          summaryEl.style.display = 'block';
+          
+          showToast(`GSVA completed for ${geneSets.length} gene sets`, 'success');
+          
+        } catch (err) {
+          console.error('GSVA error:', err);
+          showToast(`GSVA failed: ${err.message}`, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-fire mr-2"></i>Run GSVA';
+        }
+      }
+      
+      function applyGSVAOverlay() {
+        const selected = document.getElementById('gsva-overlay-select').value;
+        const colorbarEl = document.getElementById('gsva-colorbar');
+        
+        if (!selected || !pratyakshaGSVAResults || !pratyakshaGSVAResults.gene_sets[selected]) {
+          // Clear GSVA overlay, revert to default
+          pratyakshaGSVAOverlay = null;
+          pratyakshaGSVABarcodeScores = {};
+          colorbarEl.style.display = 'none';
+          updatePratyakshaOverlay();
+          return;
+        }
+        
+        const gs = pratyakshaGSVAResults.gene_sets[selected];
+        pratyakshaGSVAOverlay = selected;
+        
+        // Build barcode -> score lookup
+        pratyakshaGSVABarcodeScores = {};
+        gs.scores.forEach(s => {
+          pratyakshaGSVABarcodeScores[s.barcode] = s.score;
+        });
+        
+        // Show colorbar
+        const lowColor = gs.colors.low;
+        const highColor = gs.colors.high;
+        document.getElementById('gsva-colorbar-low').textContent = gs.min_score.toFixed(2);
+        document.getElementById('gsva-colorbar-high').textContent = gs.max_score.toFixed(2);
+        document.getElementById('gsva-colorbar-label').textContent = selected;
+        document.getElementById('gsva-colorbar-gradient').style.background = 
+          `linear-gradient(to right, ${lowColor}, ${highColor})`;
+        colorbarEl.style.display = 'block';
+        
+        updatePratyakshaOverlay();
+      }
+      
+      // Interpolate between two hex colors based on t (0..1)
+      function interpolateColor(color1, color2, t) {
+        const c1 = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color1);
+        const c2 = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color2);
+        if (!c1 || !c2) return color1;
+        const r = Math.round(parseInt(c1[1], 16) * (1 - t) + parseInt(c2[1], 16) * t);
+        const g = Math.round(parseInt(c1[2], 16) * (1 - t) + parseInt(c2[2], 16) * t);
+        const b = Math.round(parseInt(c1[3], 16) * (1 - t) + parseInt(c2[3], 16) * t);
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+      
       // Accordion toggle for collapsible analysis panels
       function toggleAccordion(panelId) {
         const panel = document.getElementById(panelId);

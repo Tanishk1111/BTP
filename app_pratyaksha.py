@@ -100,6 +100,80 @@ router = APIRouter(prefix="/pratyaksha", tags=["Pratyaksha Viewer"])
 _adata_cache = {}
 _demo_mode = False  # Set to True if no data available
 
+# ============================================
+# Cell Type Annotation Storage & Status
+# ============================================
+_annotation_status = {}  # session_id -> {"status": "pending/running/complete/error", "message": "..."}
+
+# Default marker genes for common cell types (breast cancer / general tissue)
+# Users can customize this via the API
+DEFAULT_CELL_TYPE_MARKERS = {
+    "Epithelial": ["EPCAM", "KRT8", "KRT18", "KRT19", "CDH1", "MUC1"],
+    "Luminal": ["ESR1", "PGR", "GATA3", "FOXA1", "XBP1"],
+    "Basal": ["KRT5", "KRT14", "KRT17", "TP63", "EGFR"],
+    "HER2+": ["ERBB2", "GRB7", "PGAP3", "STARD3"],
+    "T cells": ["CD3D", "CD3E", "CD3G", "CD4", "CD8A", "CD8B"],
+    "B cells": ["CD19", "CD79A", "CD79B", "MS4A1", "PAX5"],
+    "Macrophages": ["CD68", "CD163", "CSF1R", "MARCO", "MSR1"],
+    "Fibroblasts": ["COL1A1", "COL1A2", "COL3A1", "DCN", "FAP", "PDGFRA"],
+    "Endothelial": ["PECAM1", "VWF", "CDH5", "ERG", "FLT1"],
+    "Adipocytes": ["ADIPOQ", "LEP", "FABP4", "PPARG", "LPL"],
+    "Smooth Muscle": ["ACTA2", "MYH11", "TAGLN", "CNN1", "DES"],
+    "NK cells": ["NCAM1", "NKG7", "GNLY", "PRF1", "KLRD1"],
+    "Dendritic cells": ["CD1C", "CLEC9A", "ITGAX", "CD83", "CD86"],
+    "Plasma cells": ["SDC1", "IGHG1", "IGHA1", "MZB1", "XBP1"],
+}
+
+# Cell type colors for visualization
+CELL_TYPE_COLORS = {
+    "Epithelial": "#e41a1c",
+    "Luminal": "#377eb8",
+    "Basal": "#4daf4a",
+    "HER2+": "#984ea3",
+    "T cells": "#ff7f00",
+    "B cells": "#ffff33",
+    "Macrophages": "#a65628",
+    "Fibroblasts": "#f781bf",
+    "Endothelial": "#999999",
+    "Adipocytes": "#66c2a5",
+    "Smooth Muscle": "#fc8d62",
+    "NK cells": "#8da0cb",
+    "Dendritic cells": "#e78ac3",
+    "Plasma cells": "#a6d854",
+    "Unknown": "#cccccc",
+}
+
+# ============================================
+# Gene Set Variation Analysis (GSVA) Gene Sets
+# MSigDB Hallmark gene sets (curated subsets)
+# ============================================
+GSVA_GENE_SETS = {
+    "Hypoxia": [
+        "VEGFA", "SLC2A1", "LDHA", "PGK1", "PDK1", "BNIP3", "P4HA1", "ADM",
+        "NDRG1", "CA9", "ENO1", "ALDOA", "GAPDH", "HK2", "PFKFB3", "PKM",
+        "LOX", "EGLN3", "SLC16A3", "ANGPTL4", "ERO1A", "GPI", "TPI1",
+        "BHLHE40", "BNIP3L", "DDIT4", "HIF1A", "HMOX1", "MXI1", "PPP1R15A"
+    ],
+    "EMT": [
+        "VIM", "CDH2", "FN1", "SNAI1", "SNAI2", "TWIST1", "TWIST2", "ZEB1",
+        "ZEB2", "MMP2", "MMP9", "SERPINE1", "TGFBI", "COL1A1", "COL1A2",
+        "COL3A1", "COL5A1", "COL5A2", "SPARC", "POSTN", "CTGF", "ACTA2",
+        "TAGLN", "FAP", "THY1", "CALD1", "FBN1", "DCN", "LUM", "BGN"
+    ],
+    "Angiogenesis": [
+        "VEGFA", "VEGFB", "VEGFC", "FLT1", "KDR", "FLT4", "ANGPT1", "ANGPT2",
+        "TEK", "PECAM1", "CDH5", "CXCL8", "HIF1A", "NRP1", "NRP2", "PDGFB",
+        "PDGFRB", "THBS1", "THBS2", "SERPINE1", "MMP2", "MMP14", "DLL4",
+        "NOTCH1", "ENG", "EFNB2", "EPHB4", "VWF", "MCAM", "ROBO4"
+    ],
+}
+
+GSVA_COLORS = {
+    "Hypoxia": {"low": "#2563eb", "high": "#dc2626"},
+    "EMT": {"low": "#059669", "high": "#d97706"},
+    "Angiogenesis": {"low": "#6d28d9", "high": "#e11d48"},
+}
+
 def get_adata(h5_path: Path = None, session_id: str = None):
     """Load and cache AnnData object. Supports session-based data."""
     global _adata_cache, _demo_mode
@@ -173,6 +247,11 @@ class GOEnrichmentRequest(BaseModel):
     top_terms: Optional[int] = None
     session_id: Optional[str] = None  # For session-based data
 
+class GSVARequest(BaseModel):
+    gene_sets: Optional[List[str]] = None  # e.g. ["Hypoxia", "EMT", "Angiogenesis"], None = all
+    barcodes: Optional[List[str]] = None   # subset of barcodes, None = all in-tissue
+    session_id: Optional[str] = None
+
 # ============================================
 # Utility Functions
 # ============================================
@@ -181,6 +260,156 @@ def sanitize_results(df: pd.DataFrame) -> pd.DataFrame:
     df = df.replace([np.inf, -np.inf], np.nan)
     df = df.fillna(0)
     return df
+
+# ============================================
+# Cell Type Annotation Functions
+# ============================================
+def run_cell_type_annotation(session_id: str, markers: dict = None):
+    """
+    Run marker-based cell type annotation for a session.
+    This function runs as a background task.
+    """
+    global _annotation_status
+    
+    if markers is None:
+        markers = DEFAULT_CELL_TYPE_MARKERS
+    
+    try:
+        _annotation_status[session_id] = {"status": "running", "message": "Loading expression data..."}
+        
+        session_dir = USER_SESSIONS_DIR / session_id
+        h5_path = session_dir / "expression.h5"
+        
+        if not h5_path.exists():
+            _annotation_status[session_id] = {
+                "status": "error", 
+                "message": "No expression data found. Cell type annotation requires expression H5 file."
+            }
+            return
+        
+        # Load expression data
+        _annotation_status[session_id] = {"status": "running", "message": "Loading expression matrix..."}
+        adata = sc.read_10x_h5(str(h5_path))
+        
+        # Load barcode positions
+        barcodes_path = session_dir / "tiles" / "barcodes_fullres.json"
+        if not barcodes_path.exists():
+            barcodes_path = session_dir / "barcodes.json"
+        
+        if barcodes_path.exists():
+            with open(barcodes_path) as f:
+                barcode_coords = json.load(f)
+            barcode_to_coord = {b["barcode"]: (b["x"], b["y"]) for b in barcode_coords}
+        else:
+            barcode_to_coord = {}
+        
+        _annotation_status[session_id] = {"status": "running", "message": "Normalizing data..."}
+        
+        # Normalize the data for scoring
+        adata_norm = adata.copy()
+        sc.pp.normalize_total(adata_norm, target_sum=1e4)
+        sc.pp.log1p(adata_norm)
+        
+        _annotation_status[session_id] = {"status": "running", "message": "Scoring cell types..."}
+        
+        # Score each cell type based on marker genes
+        cell_type_scores = {}
+        available_genes = set(adata_norm.var_names)
+        
+        for cell_type, marker_genes in markers.items():
+            # Find which markers are in the dataset
+            present_markers = [g for g in marker_genes if g in available_genes]
+            
+            if len(present_markers) >= 1:
+                # Calculate mean expression of marker genes per cell
+                marker_idx = [adata_norm.var_names.get_loc(g) for g in present_markers]
+                
+                if hasattr(adata_norm.X, 'toarray'):
+                    marker_expr = adata_norm.X[:, marker_idx].toarray()
+                else:
+                    marker_expr = adata_norm.X[:, marker_idx]
+                
+                # Mean expression across markers
+                cell_type_scores[cell_type] = np.mean(marker_expr, axis=1)
+            else:
+                cell_type_scores[cell_type] = np.zeros(adata_norm.n_obs)
+        
+        _annotation_status[session_id] = {"status": "running", "message": "Assigning cell types..."}
+        
+        # Assign cell type based on highest score
+        score_matrix = np.column_stack([cell_type_scores[ct] for ct in cell_type_scores.keys()])
+        cell_types_list = list(cell_type_scores.keys())
+        
+        # Get the cell type with max score for each cell
+        max_scores = np.max(score_matrix, axis=1)
+        max_indices = np.argmax(score_matrix, axis=1)
+        
+        # Assign "Unknown" if max score is below threshold
+        threshold = 0.1  # Minimum expression threshold
+        annotations = []
+        
+        for i, barcode in enumerate(adata_norm.obs_names):
+            if max_scores[i] < threshold:
+                cell_type = "Unknown"
+                confidence = 0.0
+            else:
+                cell_type = cell_types_list[max_indices[i]]
+                # Confidence = how much higher the top score is vs second highest
+                sorted_scores = np.sort(score_matrix[i])[::-1]
+                if sorted_scores[1] > 0:
+                    confidence = min(1.0, (sorted_scores[0] - sorted_scores[1]) / sorted_scores[0])
+                else:
+                    confidence = 1.0 if sorted_scores[0] > 0 else 0.0
+            
+            annotation = {
+                "barcode": barcode,
+                "cell_type": cell_type,
+                "confidence": round(float(confidence), 3),
+                "score": round(float(max_scores[i]), 3),
+                "color": CELL_TYPE_COLORS.get(cell_type, "#cccccc")
+            }
+            
+            # Add coordinates if available
+            if barcode in barcode_to_coord:
+                annotation["x"] = barcode_to_coord[barcode][0]
+                annotation["y"] = barcode_to_coord[barcode][1]
+            
+            annotations.append(annotation)
+        
+        # Calculate summary statistics
+        cell_type_counts = {}
+        for ann in annotations:
+            ct = ann["cell_type"]
+            cell_type_counts[ct] = cell_type_counts.get(ct, 0) + 1
+        
+        # Save annotations
+        annotation_result = {
+            "session_id": session_id,
+            "total_cells": len(annotations),
+            "cell_type_counts": cell_type_counts,
+            "colors": CELL_TYPE_COLORS,
+            "annotations": annotations
+        }
+        
+        annotation_path = session_dir / "cell_type_annotations.json"
+        with open(annotation_path, "w") as f:
+            json.dump(annotation_result, f)
+        
+        _annotation_status[session_id] = {
+            "status": "complete",
+            "message": f"Annotated {len(annotations)} cells into {len(cell_type_counts)} types",
+            "cell_type_counts": cell_type_counts
+        }
+        
+        print(f"[ANNOTATION] Session {session_id}: {len(annotations)} cells annotated")
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        _annotation_status[session_id] = {
+            "status": "error",
+            "message": f"Annotation failed: {str(e)}"
+        }
 
 # ============================================
 # Endpoints
@@ -306,17 +535,32 @@ async def process_spatial_data(
         shutil.copy(barcodes_json_path, tiles_dir / "barcodes_fullres.json")
         
         # Save expression data if provided
+        annotation_started = False
         if expression_h5:
             h5_path = session_dir / "expression.h5"
             with open(h5_path, "wb") as f:
                 f.write(await expression_h5.read())
             print(f"[DATA] Saved expression data: {h5_path}")
+            
+            # Start cell type annotation as background task
+            if SCANPY_AVAILABLE:
+                import threading
+                _annotation_status[session_id] = {"status": "pending", "message": "Annotation queued..."}
+                annotation_thread = threading.Thread(
+                    target=run_cell_type_annotation,
+                    args=(session_id,),
+                    daemon=True
+                )
+                annotation_thread.start()
+                annotation_started = True
+                print(f"[ANNOTATION] Started background annotation for session {session_id}")
         
         return {
             "status": "success",
             "session_id": session_id,
             "num_spots": len(barcode_coords),
             "has_expression": expression_h5 is not None,
+            "annotation_started": annotation_started,
             "tiles_path": f"/pratyaksha/session/{session_id}/tiles"
         }
         
@@ -453,6 +697,114 @@ async def get_session_barcodes(session_id: str):
     
     with open(barcodes_path) as f:
         return json.load(f)
+
+# ============================================
+# Cell Type Annotation Endpoints
+# ============================================
+@router.get("/session/{session_id}/annotation/status")
+async def get_annotation_status(session_id: str):
+    """Get the status of cell type annotation for a session"""
+    if session_id in _annotation_status:
+        return _annotation_status[session_id]
+    
+    # Check if annotation file exists (completed previously)
+    annotation_path = USER_SESSIONS_DIR / session_id / "cell_type_annotations.json"
+    if annotation_path.exists():
+        with open(annotation_path) as f:
+            data = json.load(f)
+        return {
+            "status": "complete",
+            "message": f"Annotation complete: {data.get('total_cells', 0)} cells",
+            "cell_type_counts": data.get("cell_type_counts", {})
+        }
+    
+    # Check if expression data exists
+    h5_path = USER_SESSIONS_DIR / session_id / "expression.h5"
+    if not h5_path.exists():
+        return {
+            "status": "unavailable",
+            "message": "No expression data available for annotation"
+        }
+    
+    return {
+        "status": "not_started",
+        "message": "Annotation has not been started"
+    }
+
+@router.get("/session/{session_id}/annotations")
+async def get_annotations(session_id: str, include_coords: bool = True):
+    """Get cell type annotations for a session"""
+    annotation_path = USER_SESSIONS_DIR / session_id / "cell_type_annotations.json"
+    
+    if not annotation_path.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail="Annotations not found. Run annotation first or wait for it to complete."
+        )
+    
+    with open(annotation_path) as f:
+        data = json.load(f)
+    
+    # Optionally strip coordinates to reduce payload size
+    if not include_coords:
+        for ann in data.get("annotations", []):
+            ann.pop("x", None)
+            ann.pop("y", None)
+    
+    return data
+
+@router.post("/session/{session_id}/annotation/start")
+async def start_annotation(session_id: str, background_tasks: BackgroundTasks):
+    """Manually start or restart cell type annotation for a session"""
+    global _annotation_status
+    
+    if not SCANPY_AVAILABLE:
+        raise HTTPException(
+            status_code=501, 
+            detail="Scanpy not installed. Annotation requires scanpy."
+        )
+    
+    session_dir = USER_SESSIONS_DIR / session_id
+    if not session_dir.exists():
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    h5_path = session_dir / "expression.h5"
+    if not h5_path.exists():
+        raise HTTPException(
+            status_code=400, 
+            detail="No expression data found. Upload H5 file to enable annotation."
+        )
+    
+    # Check if already running
+    if session_id in _annotation_status and _annotation_status[session_id].get("status") == "running":
+        return {
+            "status": "already_running",
+            "message": "Annotation is already in progress"
+        }
+    
+    # Start annotation in background
+    import threading
+    _annotation_status[session_id] = {"status": "pending", "message": "Annotation queued..."}
+    annotation_thread = threading.Thread(
+        target=run_cell_type_annotation,
+        args=(session_id,),
+        daemon=True
+    )
+    annotation_thread.start()
+    
+    return {
+        "status": "started",
+        "message": "Cell type annotation started",
+        "session_id": session_id
+    }
+
+@router.get("/annotation/markers")
+async def get_available_markers():
+    """Get the default marker gene sets used for annotation"""
+    return {
+        "markers": DEFAULT_CELL_TYPE_MARKERS,
+        "colors": CELL_TYPE_COLORS
+    }
 
 @router.post("/expression")
 def get_expression(request: ExpressionRequest):
@@ -780,3 +1132,120 @@ def go_enrichment(request: GOEnrichmentRequest):
     except Exception as e:
         print(f"GO enrichment error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"GO enrichment failed: {str(e)}")
+
+# ============================================
+# Gene Set Variation Analysis (GSVA)
+# ============================================
+@router.post("/gsva")
+def run_gsva(request: GSVARequest):
+    """
+    Compute per-spot gene set variation scores for Hypoxia, EMT, and Angiogenesis.
+    Uses mean z-score of genes in each set as a lightweight GSVA-like score.
+    """
+    try:
+        adata = get_adata(session_id=request.session_id)
+        
+        # Determine which gene sets to score
+        requested_sets = request.gene_sets or list(GSVA_GENE_SETS.keys())
+        
+        # Validate
+        invalid = [s for s in requested_sets if s not in GSVA_GENE_SETS]
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown gene sets: {invalid}. Available: {list(GSVA_GENE_SETS.keys())}"
+            )
+        
+        # Select barcodes
+        if request.barcodes and len(request.barcodes) > 0:
+            valid_bc = [bc for bc in request.barcodes if bc in adata.obs_names]
+            if not valid_bc:
+                raise HTTPException(status_code=400, detail="No valid barcodes found")
+            adata_sub = adata[valid_bc].copy()
+        else:
+            adata_sub = adata.copy()
+        
+        # Normalize (RC normalization)
+        sc.pp.normalize_total(adata_sub, target_sum=1e4)
+        sc.pp.log1p(adata_sub)
+        
+        available_genes = set(adata_sub.var_names)
+        
+        # Compute z-scores across all cells for proper scaling
+        if hasattr(adata_sub.X, 'toarray'):
+            expr_matrix = adata_sub.X.toarray()
+        else:
+            expr_matrix = np.array(adata_sub.X)
+        
+        gene_means = np.mean(expr_matrix, axis=0)
+        gene_stds = np.std(expr_matrix, axis=0)
+        gene_stds[gene_stds == 0] = 1  # avoid division by zero
+        z_matrix = (expr_matrix - gene_means) / gene_stds
+        
+        results = {}
+        
+        for gene_set_name in requested_sets:
+            genes = GSVA_GENE_SETS[gene_set_name]
+            present = [g for g in genes if g in available_genes]
+            
+            if len(present) == 0:
+                print(f"[GSVA] No genes found for {gene_set_name}, skipping")
+                continue
+            
+            gene_indices = [adata_sub.var_names.get_loc(g) for g in present]
+            
+            # Mean z-score across genes in the set per cell
+            set_scores = np.mean(z_matrix[:, gene_indices], axis=1)
+            
+            # Build per-barcode results
+            scores_list = []
+            for i, bc in enumerate(adata_sub.obs_names):
+                scores_list.append({
+                    "barcode": bc,
+                    "score": round(float(set_scores[i]), 4)
+                })
+            
+            # Statistics for color scaling
+            score_values = set_scores.tolist()
+            results[gene_set_name] = {
+                "scores": scores_list,
+                "genes_used": present,
+                "genes_missing": [g for g in genes if g not in available_genes],
+                "n_genes_used": len(present),
+                "n_genes_total": len(genes),
+                "min_score": round(float(np.min(set_scores)), 4),
+                "max_score": round(float(np.max(set_scores)), 4),
+                "mean_score": round(float(np.mean(set_scores)), 4),
+                "colors": GSVA_COLORS.get(gene_set_name, {"low": "#2563eb", "high": "#dc2626"})
+            }
+            
+            print(f"[GSVA] {gene_set_name}: {len(present)}/{len(genes)} genes, "
+                  f"score range [{np.min(set_scores):.3f}, {np.max(set_scores):.3f}]")
+        
+        if len(results) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="No gene sets could be scored - none of the genes were found in the dataset"
+            )
+        
+        return {
+            "status": "success",
+            "n_barcodes": adata_sub.n_obs,
+            "gene_sets": results
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"GSVA error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"GSVA failed: {str(e)}")
+
+@router.get("/gsva/gene_sets")
+def get_gsva_gene_sets():
+    """Return available gene sets and their genes."""
+    return {
+        "gene_sets": {name: genes for name, genes in GSVA_GENE_SETS.items()},
+        "colors": GSVA_COLORS
+    }
